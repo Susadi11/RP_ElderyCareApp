@@ -21,6 +21,10 @@ import com.rp_elderycareapp.data.MessageType
 import java.text.SimpleDateFormat
 import java.util.*
 
+// Platform-specific composable for AI avatar
+@Composable
+expect fun AIAvatarIcon()
+
 @Composable
 fun MessageBubble(
     message: ChatMessage,
@@ -46,21 +50,8 @@ fun MessageBubble(
         horizontalArrangement = if (isUserMessage) Arrangement.End else Arrangement.Start
     ) {
         if (!isUserMessage) {
-            // AI Companion Avatar
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(MaterialTheme.colorScheme.primary),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "AI",
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+            // AI Companion Avatar with robot icon
+            AIAvatarIcon()
             Spacer(modifier = Modifier.width(8.dp))
         }
 

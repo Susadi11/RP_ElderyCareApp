@@ -1,14 +1,19 @@
 package com.rp_elderycareapp.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -17,11 +22,14 @@ import com.rp_elderycareapp.components.MessageBubble
 import com.rp_elderycareapp.data.ChatMessage
 import com.rp_elderycareapp.data.MessageSender
 import com.rp_elderycareapp.data.MessageType
+import com.rp_elderycareapp.ui.theme.AppColors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
-fun ChatScreen() {
+fun ChatScreen(
+    onNavigateBack: () -> Unit = {}
+) {
     var messages by remember { mutableStateOf(getInitialMessages()) }
     var currentMessage by remember { mutableStateOf("") }
     var isRecording by remember { mutableStateOf(false) }
@@ -42,46 +50,11 @@ fun ChatScreen() {
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // Chat header
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = MaterialTheme.colorScheme.primary,
-            shadowElevation = 4.dp
-        ) {
-            Row(
-                modifier = Modifier.padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .background(
-                            MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f),
-                            shape = androidx.compose.foundation.shape.CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "🤖",
-                        fontSize = 24.sp
-                    )
-                }
-                Column {
-                    Text(
-                        text = "AI Care Companion",
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = if (isTyping) "Typing..." else "Online • Ready to help",
-                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
-                        fontSize = 14.sp
-                    )
-                }
-            }
-        }
+        // Chat header with glass effect
+        ChatHeaderContent(
+            isTyping = isTyping,
+            onNavigateBack = onNavigateBack
+        )
 
         // Messages list
         LazyColumn(
@@ -179,13 +152,19 @@ private fun getInitialMessages(): List<ChatMessage> {
     return listOf(
         ChatMessage(
             id = "welcome_1",
-            content = "Hello! I'm your AI Care Companion. I'm here to help you with daily tasks, remind you about medications, and have friendly conversations. How are you feeling today?",
+            content = "Hello! I'm Hale, your AI Care Companion. I'm here to help you with daily tasks, remind you about medications, and have friendly conversations. How are you feeling today?",
             sender = MessageSender.AI_COMPANION,
             type = MessageType.TEXT,
             timestamp = System.currentTimeMillis() - 5000
         )
     )
 }
+
+@Composable
+expect fun ChatHeaderContent(
+    isTyping: Boolean,
+    onNavigateBack: () -> Unit
+)
 
 private fun generateAIResponse(userMessage: String): String {
     val responses = when {

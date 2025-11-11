@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
@@ -16,9 +15,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.rp_elderycareapp.ui.theme.AppColors
+
+// Expect function for platform-specific mic icon
+expect fun getMicIconPainter(): Any
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,6 +100,27 @@ fun ChatInputBar(
                     enabled = !isRecording
                 )
 
+                // Send button (always visible)
+                IconButton(
+                    onClick = {
+                        if (message.trim().isNotEmpty()) {
+                            onSendMessage()
+                        }
+                    },
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(CircleShape)
+                        .background(AppColors.Primary),
+                    enabled = message.trim().isNotEmpty() && !isRecording
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Send,
+                        contentDescription = "Send message",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
                 // Voice recording button
                 IconButton(
                     onClick = {
@@ -108,36 +134,16 @@ fun ChatInputBar(
                         .size(56.dp)
                         .clip(CircleShape)
                         .background(
-                            if (isRecording) MaterialTheme.colorScheme.tertiary
-                            else MaterialTheme.colorScheme.primary
+                            if (isRecording) Color(0xFFEF4444) // Red when recording
+                            else Color(0xFF10B981) // Green for mic
                         )
                 ) {
-                    Icon(
-                        imageVector = if (isRecording) Icons.Default.Close else Icons.Default.Add,
-                        contentDescription = if (isRecording) "Stop recording" else "Start voice recording",
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-
-                // Send button (only show when there's text)
-                if (message.trim().isNotEmpty() && !isRecording) {
-                    IconButton(
-                        onClick = onSendMessage,
-                        modifier = Modifier
-                            .size(56.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.secondary)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Send,
-                            contentDescription = "Send message",
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
+                    MicIconContent(isRecording = isRecording)
                 }
             }
         }
     }
 }
+
+@Composable
+expect fun MicIconContent(isRecording: Boolean)
