@@ -44,7 +44,11 @@ fun App() {
                     GameScreen()
                 }
                 composable(NavRoutes.HOME.route) {
-                    HomeScreen()
+                    HomeScreen(
+                        onStartChat = { navController.navigate(NavRoutes.CHAT.route) },
+                        onPlayGames = { navController.navigate(NavRoutes.GAME.route) },
+                        onTakeMmseTest = { navController.navigate(NavRoutes.MMSE_TEST.route) }
+                    )
                 }
                 composable(NavRoutes.MMSE_TEST.route) {
                     MmseTestScreen()

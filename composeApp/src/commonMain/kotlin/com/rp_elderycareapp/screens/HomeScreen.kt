@@ -1,36 +1,62 @@
 package com.rp_elderycareapp.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.rp_elderycareapp.components.*
+import com.rp_elderycareapp.ui.theme.AppColors
+import com.rp_elderycareapp.ui.theme.ThemeConfig
 
+/**
+ * Modern, minimalistic Apple-aesthetic home screen for elderly care app
+ * Features:
+ * - Clean light blue-tinted background
+ * - Time display with date
+ * - Personalized greeting
+ * - 4 stats cards in grid layout
+ * - Quick action buttons with blue gradients
+ */
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    userName: String = "User",
+    onStartChat: () -> Unit = {},
+    onPlayGames: () -> Unit = {},
+    onTakeMmseTest: () -> Unit = {}
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(16.dp),
-        contentAlignment = Alignment.Center
+            .background(AppColors.Background)
     ) {
-        Text(
-            text = "Home Screen\n\nWelcome to the Elderly Care App!\nThis is the main dashboard where users can access all features.",
-            style = MaterialTheme.typography.headlineMedium.copy(
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
-            ),
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.primary
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+        ) {
+            // Header with time and profile icon
+            HomeHeader(userName = userName)
+
+            // Greeting section
+            GreetingSection(userName = userName)
+
+            // Stats cards grid
+            StatsGrid()
+
+            Spacer(modifier = Modifier.height(ThemeConfig.Padding.Section))
+
+            // Quick action buttons
+            QuickActionsSection(
+                onStartChat = onStartChat,
+                onPlayGames = onPlayGames,
+                onViewProgress = onTakeMmseTest
+            )
+
+            // Bottom spacing for safe area
+            Spacer(modifier = Modifier.height(32.dp))
+        }
     }
 }

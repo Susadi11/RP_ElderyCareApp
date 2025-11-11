@@ -8,16 +8,19 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
-import com.rp_elderycareapp.navigation.bottomNavItems
+import com.rp_elderycareapp.navigation.getBottomNavItems
 
 @Composable
 fun BottomNavigationBar(navController: NavController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    val bottomNavItems = getBottomNavItems()
 
     NavigationBar(
         containerColor = MaterialTheme.colorScheme.surface,
@@ -28,10 +31,16 @@ fun BottomNavigationBar(navController: NavController) {
             
             NavigationBarItem(
                 icon = {
-                    Icon(
-                        imageVector = item.icon,
-                        contentDescription = item.label
-                    )
+                    when (val icon = item.icon) {
+                        is ImageVector -> Icon(
+                            imageVector = icon,
+                            contentDescription = item.label
+                        )
+                        is Painter -> Icon(
+                            painter = icon,
+                            contentDescription = item.label
+                        )
+                    }
                 },
                 label = {
                     Text(
@@ -62,7 +71,7 @@ fun BottomNavigationBar(navController: NavController) {
                     selectedTextColor = MaterialTheme.colorScheme.primary,
                     unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                    indicatorColor = com.rp_elderycareapp.ui.theme.AppColors.LightBlue.copy(alpha = 0.3f)
                 )
             )
         }
