@@ -262,6 +262,7 @@ fun QuickActionsSection(
     onStartChat: () -> Unit = {},
     onPlayGames: () -> Unit = {},
     onViewProgress: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -280,7 +281,7 @@ fun QuickActionsSection(
 
         // Settings Button - Gray background
         SettingsButton(
-            onClick = onViewProgress,
+            onClick = onNavigateToSettings,
             modifier = Modifier.fillMaxWidth()
         )
     }

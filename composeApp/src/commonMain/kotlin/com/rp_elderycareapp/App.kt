@@ -19,6 +19,8 @@ import com.rp_elderycareapp.screens.GameScreen
 import com.rp_elderycareapp.screens.HomeScreen
 import com.rp_elderycareapp.screens.MmseTestScreen
 import com.rp_elderycareapp.screens.ReminderScreen
+import com.rp_elderycareapp.screens.SettingsScreen
+import com.rp_elderycareapp.screens.ProfileScreen
 import com.rp_elderycareapp.ui.theme.ElderyCareTheme
 
 @Composable
@@ -29,8 +31,10 @@ fun App() {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route
         
-        // Hide bottom bar on chat screen
-        val showBottomBar = currentRoute != NavRoutes.CHAT.route
+        // Hide bottom bar on chat screen, settings screen, and profile screen
+        val showBottomBar = currentRoute != NavRoutes.CHAT.route && 
+                           currentRoute != NavRoutes.SETTINGS.route && 
+                           currentRoute != NavRoutes.PROFILE.route
         
         Scaffold(
             modifier = Modifier.fillMaxSize(),
@@ -61,7 +65,9 @@ fun App() {
                         HomeScreen(
                             onStartChat = { navController.navigate(NavRoutes.CHAT.route) },
                             onPlayGames = { navController.navigate(NavRoutes.GAME.route) },
-                            onTakeMmseTest = { navController.navigate(NavRoutes.MMSE_TEST.route) }
+                            onTakeMmseTest = { navController.navigate(NavRoutes.MMSE_TEST.route) },
+                            onNavigateToProfile = { navController.navigate(NavRoutes.PROFILE.route) },
+                            onNavigateToSettings = { navController.navigate(NavRoutes.SETTINGS.route) }
                         )
                     }
                 }
@@ -74,6 +80,24 @@ fun App() {
                     Box(modifier = Modifier.padding(innerPadding)) {
                         ReminderScreen()
                     }
+                }
+                composable(NavRoutes.SETTINGS.route) {
+                    // Settings screen takes full height (no bottom padding)
+                    SettingsScreen(
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+                composable(NavRoutes.PROFILE.route) {
+                    // Profile screen takes full height (no bottom padding)
+                    ProfileScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        onLogout = { 
+                            // Navigate back to home and clear backstack
+                            navController.navigate(NavRoutes.HOME.route) {
+                                popUpTo(NavRoutes.HOME.route) { inclusive = true }
+                            }
+                        }
+                    )
                 }
             }
         }

@@ -18,8 +18,9 @@ import androidx.compose.ui.unit.sp
 import com.rp_elderycareapp.data.ChatMessage
 import com.rp_elderycareapp.data.MessageSender
 import com.rp_elderycareapp.data.MessageType
-import java.text.SimpleDateFormat
-import java.util.*
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 // Platform-specific composable for AI avatar
 @Composable
@@ -115,8 +116,11 @@ fun MessageBubble(
             }
             
             // Timestamp
+            val time = Instant.fromEpochMilliseconds(message.timestamp)
+                .toLocalDateTime(TimeZone.currentSystemDefault())
+            val timeString = "${time.hour.toString().padStart(2, '0')}:${time.minute.toString().padStart(2, '0')}"
             Text(
-                text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(message.timestamp)),
+                text = timeString,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp,
                 modifier = Modifier.padding(top = 4.dp, start = 4.dp, end = 4.dp)

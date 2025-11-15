@@ -5,5 +5,7 @@ enum class NavRoutes(val route: String) {
     CHAT("chat"),
     GAME("game"),
     MMSE_TEST("mmse_test"),
-    REMINDER("reminder")
+    REMINDER("reminder"),
+    SETTINGS("settings"),
+    PROFILE("profile")
 }

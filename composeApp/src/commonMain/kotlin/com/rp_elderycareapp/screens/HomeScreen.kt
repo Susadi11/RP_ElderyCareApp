@@ -25,7 +25,9 @@ fun HomeScreen(
     userName: String = "User",
     onStartChat: () -> Unit = {},
     onPlayGames: () -> Unit = {},
-    onTakeMmseTest: () -> Unit = {}
+    onTakeMmseTest: () -> Unit = {},
+    onNavigateToProfile: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {}
 ) {
     Box(
         modifier = Modifier
@@ -38,7 +40,10 @@ fun HomeScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             // Header with time and profile icon
-            HomeHeader(userName = userName)
+            HomeHeader(
+                userName = userName,
+                onProfileClick = onNavigateToProfile
+            )
 
             // Greeting section
             GreetingSection(userName = userName)
@@ -52,7 +57,8 @@ fun HomeScreen(
             QuickActionsSection(
                 onStartChat = onStartChat,
                 onPlayGames = onPlayGames,
-                onViewProgress = onTakeMmseTest
+                onViewProgress = onTakeMmseTest,
+                onNavigateToSettings = onNavigateToSettings
             )
 
             // Bottom spacing for safe area

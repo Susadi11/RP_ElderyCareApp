@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
@@ -25,6 +27,7 @@ import com.rp_elderycareapp.data.MessageType
 import com.rp_elderycareapp.ui.theme.AppColors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Clock
 
 @Composable
 fun ChatScreen(
@@ -41,7 +44,14 @@ fun ChatScreen(
     // Auto-scroll to bottom when new messages arrive
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
-            listState.animateScrollToItem(messages.size - 1)
+            coroutineScope.launch {
+                try {
+                    delay(100) // Small delay to ensure layout is complete
+                    listState.animateScrollToItem(messages.size - 1)
+                } catch (e: Exception) {
+                    listState.scrollToItem(messages.size - 1)
+                }
+            }
         }
     }
 
@@ -50,20 +60,26 @@ fun ChatScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // Chat header with glass effect
+        // Chat header with glass effect - fixed at top
         ChatHeaderContent(
             isTyping = isTyping,
             onNavigateBack = onNavigateBack
         )
 
-        // Messages list
+        // Messages list - takes remaining space
         LazyColumn(
             state = listState,
             modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-            contentPadding = PaddingValues(vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+                .fillMaxWidth()
+                .weight(1f), // Take all available space between header and input
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                top = 8.dp,
+                bottom = 16.dp // Extra padding at bottom for better spacing
+            ),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            reverseLayout = false
         ) {
             items(messages) { message ->
                 MessageBubble(
@@ -81,7 +97,7 @@ fun ChatScreen(
             }
         }
 
-        // Input bar
+        // Input bar at the bottom - will move with keyboard
         ChatInputBar(
             message = currentMessage,
             onMessageChange = { currentMessage = it },
@@ -89,21 +105,21 @@ fun ChatScreen(
                 if (currentMessage.trim().isNotEmpty()) {
                     // Add user message
                     val userMessage = ChatMessage(
-                        id = "msg_${System.currentTimeMillis()}",
+                        id = "msg_${Clock.System.now().toEpochMilliseconds()}",
                         content = currentMessage.trim(),
                         sender = MessageSender.USER,
                         type = MessageType.TEXT
                     )
                     messages = messages + userMessage
                     currentMessage = ""
-                    
+
                     // Simulate AI response
                     coroutineScope.launch {
                         isTyping = true
                         delay(1500) // Simulate thinking time
-                        
+
                         val aiResponse = ChatMessage(
-                            id = "ai_${System.currentTimeMillis()}",
+                            id = "ai_${Clock.System.now().toEpochMilliseconds()}",
                             content = generateAIResponse(userMessage.content),
                             sender = MessageSender.AI_COMPANION,
                             type = MessageType.TEXT
@@ -121,20 +137,20 @@ fun ChatScreen(
                 isRecording = false
                 // Add voice message
                 val voiceMessage = ChatMessage(
-                    id = "voice_${System.currentTimeMillis()}",
+                    id = "voice_${Clock.System.now().toEpochMilliseconds()}",
                     content = "Voice message recorded",
                     sender = MessageSender.USER,
                     type = MessageType.VOICE
                 )
                 messages = messages + voiceMessage
-                
+
                 // Simulate AI voice response
                 coroutineScope.launch {
                     isTyping = true
                     delay(2000)
-                    
+
                     val aiVoiceResponse = ChatMessage(
-                        id = "ai_voice_${System.currentTimeMillis()}",
+                        id = "ai_voice_${Clock.System.now().toEpochMilliseconds()}",
                         content = "I heard your voice message! Let me help you with that.",
                         sender = MessageSender.AI_COMPANION,
                         type = MessageType.TEXT
@@ -155,7 +171,7 @@ private fun getInitialMessages(): List<ChatMessage> {
             content = "Hello! I'm Hale, your AI Care Companion. I'm here to help you with daily tasks, remind you about medications, and have friendly conversations. How are you feeling today?",
             sender = MessageSender.AI_COMPANION,
             type = MessageType.TEXT,
-            timestamp = System.currentTimeMillis() - 5000
+            timestamp = Clock.System.now().toEpochMilliseconds() - 5000
         )
     )
 }

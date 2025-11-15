@@ -1,5 +1,7 @@
 package com.rp_elderycareapp.data
 
+import kotlinx.datetime.Clock
+
 enum class MessageType {
     TEXT,
     VOICE
@@ -15,6 +17,6 @@ data class ChatMessage(
     val content: String,
     val sender: MessageSender,
     val type: MessageType,
-    val timestamp: Long = System.currentTimeMillis(),
+    val timestamp: Long = Clock.System.now().toEpochMilliseconds(),
     val isPlaying: Boolean = false // For voice messages
 )

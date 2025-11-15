@@ -1,6 +1,7 @@
 package com.rp_elderycareapp.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
@@ -29,6 +30,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun HomeHeader(
     userName: String = "User",
+    onProfileClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var currentTime by remember { mutableStateOf(TimeUtils.getCurrentTimeFormatted()) }
@@ -74,7 +76,7 @@ fun HomeHeader(
             )
         }
 
-        // Profile Icon - Circular blue gradient (top right)
+        // Profile Icon - Circular blue gradient (top right) - Clickable
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
@@ -87,7 +89,8 @@ fun HomeHeader(
                         )
                     ),
                     shape = CircleShape
-                ),
+                )
+                .clickable { onProfileClick() },
             contentAlignment = Alignment.Center
         ) {
             Text(
