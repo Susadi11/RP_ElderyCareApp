@@ -7,3 +7,5 @@ class AndroidPlatform : Platform {
 }
 
 actual fun getPlatform(): Platform = AndroidPlatform()
+
+actual fun getApiBaseUrl(): String = ApiConfig.BASE_URL_ANDROID_EMULATOR

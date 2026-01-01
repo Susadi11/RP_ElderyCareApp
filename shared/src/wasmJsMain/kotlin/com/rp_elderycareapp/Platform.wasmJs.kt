@@ -5,3 +5,5 @@ class WasmPlatform: Platform {
 }
 
 actual fun getPlatform(): Platform = WasmPlatform()
+
+actual fun getApiBaseUrl(): String = ApiConfig.BASE_URL_LOCALHOST

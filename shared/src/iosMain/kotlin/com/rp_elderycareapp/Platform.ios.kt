@@ -7,3 +7,5 @@ class IOSPlatform: Platform {
 }
 
 actual fun getPlatform(): Platform = IOSPlatform()
+
+actual fun getApiBaseUrl(): String = ApiConfig.BASE_URL_LOCALHOST
