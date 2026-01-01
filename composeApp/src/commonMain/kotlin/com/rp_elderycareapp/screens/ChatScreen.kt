@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.rp_elderycareapp.api.ChatApi
 import com.rp_elderycareapp.components.ChatInputBar
 import com.rp_elderycareapp.components.MessageBubble
 import com.rp_elderycareapp.data.ChatMessage
@@ -37,7 +38,10 @@ fun ChatScreen(
     var currentMessage by remember { mutableStateOf("") }
     var isRecording by remember { mutableStateOf(false) }
     var isTyping by remember { mutableStateOf(false) }
-    
+    var sessionId by remember { mutableStateOf<String?>(null) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    val chatApi = remember { ChatApi() }
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
 
@@ -111,21 +115,48 @@ fun ChatScreen(
                         type = MessageType.TEXT
                     )
                     messages = messages + userMessage
+                    val messageText = currentMessage.trim()
                     currentMessage = ""
 
-                    // Simulate AI response
+                    // Call real backend API
                     coroutineScope.launch {
                         isTyping = true
-                        delay(1500) // Simulate thinking time
+                        errorMessage = null
 
-                        val aiResponse = ChatMessage(
-                            id = "ai_${Clock.System.now().toEpochMilliseconds()}",
-                            content = generateAIResponse(userMessage.content),
-                            sender = MessageSender.AI_COMPANION,
-                            type = MessageType.TEXT
-                        )
-                        messages = messages + aiResponse
-                        isTyping = false
+                        try {
+                            val result = chatApi.sendTextMessage(
+                                userId = "user_001", // You can make this dynamic later
+                                message = messageText,
+                                sessionId = sessionId
+                            )
+
+                            result.onSuccess { response ->
+                                // Update session ID from response
+                                sessionId = response.session_id
+
+                                val aiResponse = ChatMessage(
+                                    id = "ai_${Clock.System.now().toEpochMilliseconds()}",
+                                    content = response.response,
+                                    sender = MessageSender.AI_COMPANION,
+                                    type = MessageType.TEXT
+                                )
+                                messages = messages + aiResponse
+                            }.onFailure { error ->
+                                errorMessage = "Connection error: ${error.message}"
+                                // Fallback to local response on error
+                                val aiResponse = ChatMessage(
+                                    id = "ai_${Clock.System.now().toEpochMilliseconds()}",
+                                    content = "I'm having trouble connecting to the server. Please make sure the backend is running on localhost:8000",
+                                    sender = MessageSender.AI_COMPANION,
+                                    type = MessageType.TEXT
+                                )
+                                messages = messages + aiResponse
+                            }
+                        } catch (e: Exception) {
+                            errorMessage = "Error: ${e.message}"
+                        } finally {
+                            isTyping = false
+                        }
                     }
                 }
             },
