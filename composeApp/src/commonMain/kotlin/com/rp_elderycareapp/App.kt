@@ -14,13 +14,7 @@ import androidx.navigation.compose.rememberNavController
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import com.rp_elderycareapp.components.BottomNavigationBar
 import com.rp_elderycareapp.navigation.NavRoutes
-import com.rp_elderycareapp.screens.ChatScreen
-import com.rp_elderycareapp.screens.GameScreen
-import com.rp_elderycareapp.screens.HomeScreen
-import com.rp_elderycareapp.screens.MmseTestScreen
-import com.rp_elderycareapp.screens.ReminderScreen
-import com.rp_elderycareapp.screens.SettingsScreen
-import com.rp_elderycareapp.screens.ProfileScreen
+import com.rp_elderycareapp.screens.*
 import com.rp_elderycareapp.ui.theme.ElderyCareTheme
 
 @Composable
@@ -31,9 +25,11 @@ fun App() {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route
         
-        // Hide bottom bar on chat screen, settings screen, and profile screen
-        val showBottomBar = currentRoute != NavRoutes.CHAT.route && 
-                           currentRoute != NavRoutes.SETTINGS.route && 
+        // Hide bottom bar on auth screens, chat, settings, and profile screens
+        val showBottomBar = currentRoute != NavRoutes.LOGIN.route &&
+                           currentRoute != NavRoutes.SIGNUP.route &&
+                           currentRoute != NavRoutes.CHAT.route &&
+                           currentRoute != NavRoutes.SETTINGS.route &&
                            currentRoute != NavRoutes.PROFILE.route
         
         Scaffold(
@@ -46,9 +42,39 @@ fun App() {
         ) { innerPadding ->
             NavHost(
                 navController = navController,
-                startDestination = NavRoutes.HOME.route,
+                startDestination = NavRoutes.LOGIN.route,
                 modifier = Modifier.fillMaxSize()
             ) {
+                // Authentication Screens
+                composable(NavRoutes.LOGIN.route) {
+                    LoginScreen(
+                        onLoginSuccess = {
+                            navController.navigate(NavRoutes.HOME.route) {
+                                popUpTo(NavRoutes.LOGIN.route) { inclusive = true }
+                            }
+                        },
+                        onNavigateToSignup = {
+                            navController.navigate(NavRoutes.SIGNUP.route)
+                        },
+                        onForgotPassword = {
+                            // TODO: Implement forgot password flow
+                        }
+                    )
+                }
+                composable(NavRoutes.SIGNUP.route) {
+                    SignupScreen(
+                        onSignupSuccess = {
+                            navController.navigate(NavRoutes.HOME.route) {
+                                popUpTo(NavRoutes.SIGNUP.route) { inclusive = true }
+                            }
+                        },
+                        onNavigateToLogin = {
+                            navController.popBackStack()
+                        }
+                    )
+                }
+
+                // Main App Screens
                 composable(NavRoutes.CHAT.route) {
                     // Chat screen takes full height (no bottom padding)
                     ChatScreen(
@@ -91,10 +117,10 @@ fun App() {
                     // Profile screen takes full height (no bottom padding)
                     ProfileScreen(
                         onNavigateBack = { navController.popBackStack() },
-                        onLogout = { 
-                            // Navigate back to home and clear backstack
-                            navController.navigate(NavRoutes.HOME.route) {
-                                popUpTo(NavRoutes.HOME.route) { inclusive = true }
+                        onLogout = {
+                            // Navigate back to login and clear backstack
+                            navController.navigate(NavRoutes.LOGIN.route) {
+                                popUpTo(0) { inclusive = true }
                             }
                         }
                     )

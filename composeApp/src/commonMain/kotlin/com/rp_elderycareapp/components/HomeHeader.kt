@@ -48,8 +48,9 @@ fun HomeHeader(
     Box(
         modifier = modifier
             .fillMaxWidth()
+            .statusBarsPadding()
             .padding(horizontal = ThemeConfig.Padding.Screen)
-            .padding(top = ThemeConfig.Padding.Screen)
+            .padding(top = 4.dp)
     ) {
         Column(
             modifier = Modifier.align(Alignment.CenterStart),
