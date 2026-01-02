@@ -241,6 +241,7 @@ private fun ProfileHeader(
                     )
                 )
             )
+            .statusBarsPadding()
             .padding(16.dp)
     ) {
         Row(

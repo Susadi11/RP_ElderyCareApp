@@ -33,6 +33,7 @@ actual fun ChatHeaderContent(
                     )
                 )
             )
+            .statusBarsPadding()
             .padding(16.dp)
     ) {
         Row(

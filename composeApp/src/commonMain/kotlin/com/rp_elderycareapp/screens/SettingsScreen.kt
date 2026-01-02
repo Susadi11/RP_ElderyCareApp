@@ -208,6 +208,7 @@ private fun SettingsHeader(
                     )
                 )
             )
+            .statusBarsPadding()
             .padding(16.dp)
     ) {
         Row(
