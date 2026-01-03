@@ -33,6 +33,7 @@ fun ChatInputBar(
     onSendMessage: () -> Unit,
     onStartVoiceRecording: () -> Unit,
     onStopVoiceRecording: () -> Unit,
+    onCancelVoiceRecording: (() -> Unit)? = null,
     isRecording: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -104,10 +105,14 @@ fun ChatInputBar(
                     enabled = !isRecording
                 )
 
-                // Send button (always visible)
+                // Send button (sends text OR stops recording and sends voice)
                 IconButton(
                     onClick = {
-                        if (message.trim().isNotEmpty()) {
+                        if (isRecording) {
+                            // Stop recording and send voice message
+                            onStopVoiceRecording()
+                        } else if (message.trim().isNotEmpty()) {
+                            // Send text message
                             onSendMessage()
                         }
                     },
@@ -115,22 +120,24 @@ fun ChatInputBar(
                         .size(56.dp)
                         .clip(CircleShape)
                         .background(AppColors.Primary),
-                    enabled = message.trim().isNotEmpty() && !isRecording
+                    enabled = message.trim().isNotEmpty() || isRecording
                 ) {
                     Icon(
                         imageVector = Icons.Default.Send,
-                        contentDescription = "Send message",
+                        contentDescription = if (isRecording) "Send voice" else "Send message",
                         tint = Color.White,
                         modifier = Modifier.size(24.dp)
                     )
                 }
 
-                // Voice recording button
+                // Voice recording button (mic to start, X to cancel)
                 IconButton(
                     onClick = {
                         if (isRecording) {
-                            onStopVoiceRecording()
+                            // Red X button - cancel recording without sending
+                            onCancelVoiceRecording?.invoke()
                         } else {
+                            // Green mic - start recording
                             onStartVoiceRecording()
                         }
                     },
@@ -138,7 +145,7 @@ fun ChatInputBar(
                         .size(56.dp)
                         .clip(CircleShape)
                         .background(
-                            if (isRecording) Color(0xFFEF4444) // Red when recording
+                            if (isRecording) Color(0xFFEF4444) // Red when recording (X button)
                             else Color(0xFF10B981) // Green for mic
                         )
                 ) {

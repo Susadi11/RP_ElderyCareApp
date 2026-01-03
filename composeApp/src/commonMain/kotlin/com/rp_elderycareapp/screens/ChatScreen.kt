@@ -45,6 +45,9 @@ fun ChatScreen(
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
 
+    // Initialize platform-specific voice recorder
+    InitializeVoiceRecorderIfNeeded()
+
     // Auto-scroll to bottom when new messages arrive
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
@@ -161,34 +164,78 @@ fun ChatScreen(
                 }
             },
             onStartVoiceRecording = {
-                isRecording = true
-                // TODO: Implement actual voice recording
+                startVoiceRecording(
+                    onStarted = { isRecording = true },
+                    onError = { error ->
+                        isRecording = false
+                        errorMessage = error
+                    }
+                )
             },
             onStopVoiceRecording = {
-                isRecording = false
-                // Add voice message
-                val voiceMessage = ChatMessage(
-                    id = "voice_${Clock.System.now().toEpochMilliseconds()}",
-                    content = "Voice message recorded",
-                    sender = MessageSender.USER,
-                    type = MessageType.VOICE
+                stopVoiceRecording(
+                    onStopped = { audioFilePath ->
+                        isRecording = false
+                        if (audioFilePath != null) {
+                            // Call real backend API with voice
+                            coroutineScope.launch {
+                                isTyping = true
+                                errorMessage = null
+
+                                try {
+                                    val result = chatApi.sendVoiceMessage(
+                                        userId = "user_001",
+                                        audioFilePath = audioFilePath,
+                                        sessionId = sessionId
+                                    )
+
+                                    result.onSuccess { voiceResponse ->
+                                        // Update session ID
+                                        sessionId = voiceResponse.session_id
+
+                                        // Add voice message as VOICE type (shows transcription in voice bubble)
+                                        val userVoiceMessage = ChatMessage(
+                                            id = "voice_${Clock.System.now().toEpochMilliseconds()}",
+                                            content = voiceResponse.transcription,
+                                            sender = MessageSender.USER,
+                                            type = MessageType.VOICE
+                                        )
+                                        messages = messages + userVoiceMessage
+
+                                        // Add AI response as TEXT
+                                        val aiResponse = ChatMessage(
+                                            id = "ai_${Clock.System.now().toEpochMilliseconds()}",
+                                            content = voiceResponse.response,
+                                            sender = MessageSender.AI_COMPANION,
+                                            type = MessageType.TEXT
+                                        )
+                                        messages = messages + aiResponse
+                                    }.onFailure { error ->
+                                        errorMessage = "Voice error: ${error.message}"
+                                        val aiResponse = ChatMessage(
+                                            id = "ai_${Clock.System.now().toEpochMilliseconds()}",
+                                            content = "I had trouble processing your voice message. Please try again or type your message.",
+                                            sender = MessageSender.AI_COMPANION,
+                                            type = MessageType.TEXT
+                                        )
+                                        messages = messages + aiResponse
+                                    }
+                                } catch (e: Exception) {
+                                    errorMessage = "Voice error: ${e.message}"
+                                } finally {
+                                    isTyping = false
+                                }
+                            }
+                        }
+                    }
                 )
-                messages = messages + voiceMessage
-
-                // Simulate AI voice response
-                coroutineScope.launch {
-                    isTyping = true
-                    delay(2000)
-
-                    val aiVoiceResponse = ChatMessage(
-                        id = "ai_voice_${Clock.System.now().toEpochMilliseconds()}",
-                        content = "I heard your voice message! Let me help you with that.",
-                        sender = MessageSender.AI_COMPANION,
-                        type = MessageType.TEXT
-                    )
-                    messages = messages + aiVoiceResponse
-                    isTyping = false
-                }
+            },
+            onCancelVoiceRecording = {
+                cancelVoiceRecording(
+                    onCancelled = {
+                        isRecording = false
+                    }
+                )
             },
             isRecording = isRecording
         )
@@ -211,6 +258,24 @@ private fun getInitialMessages(): List<ChatMessage> {
 expect fun ChatHeaderContent(
     isTyping: Boolean,
     onNavigateBack: () -> Unit
+)
+
+// Platform-specific voice recorder initialization
+@Composable
+expect fun InitializeVoiceRecorderIfNeeded()
+
+// Platform-specific voice recording
+expect fun startVoiceRecording(
+    onStarted: () -> Unit,
+    onError: (String) -> Unit
+)
+
+expect fun stopVoiceRecording(
+    onStopped: (String?) -> Unit
+)
+
+expect fun cancelVoiceRecording(
+    onCancelled: () -> Unit
 )
 
 private fun generateAIResponse(userMessage: String): String {

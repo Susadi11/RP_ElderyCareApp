@@ -76,3 +76,27 @@ actual fun ChatHeaderContent(
         }
     }
 }
+
+@Composable
+actual fun InitializeVoiceRecorderIfNeeded() {
+    // No initialization needed for iOS
+}
+
+actual fun startVoiceRecording(
+    onStarted: () -> Unit,
+    onError: (String) -> Unit
+) {
+    onError("Voice recording not yet implemented for iOS")
+}
+
+actual fun stopVoiceRecording(
+    onStopped: (String?) -> Unit
+) {
+    onStopped(null)
+}
+
+actual fun cancelVoiceRecording(
+    onCancelled: () -> Unit
+) {
+    onCancelled()
+}
