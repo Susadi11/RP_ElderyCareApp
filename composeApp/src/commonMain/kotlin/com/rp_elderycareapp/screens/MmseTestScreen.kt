@@ -77,16 +77,6 @@ fun MmseTestScreen(
             // Logo Section
             LogoSection(alpha = alpha.value)
 
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Title Section
-            Text(
-                text = "Dementia Care App",
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF1A1A2E),
-                textAlign = TextAlign.Center
-            )
 
             Spacer(modifier = Modifier.height(12.dp))
 

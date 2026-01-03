@@ -97,7 +97,7 @@ fun MmseStartTestScreen(
                 // Logo Section
                 LogoSection()
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(32.dp))
 
                 // Title
                 Text(
@@ -127,7 +127,7 @@ fun MmseStartTestScreen(
                 // Microphone Icon with Animation
                 MicrophoneIcon()
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(40.dp))
 
                 // Voice Accessible Card
                 VoiceAccessibleCard()
@@ -182,7 +182,7 @@ fun MmseStartTestScreen(
 private fun LogoSection() {
     Box(
         modifier = Modifier
-            .size(80.dp)
+            .size(100.dp)
             .shadow(
                 elevation = 8.dp,
                 shape = CircleShape,
@@ -196,7 +196,7 @@ private fun LogoSection() {
     ) {
         Text(
             text = "logo",
-            fontSize = 22.sp,
+            fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
             color = Color(0xFF4A9FFF)
         )
