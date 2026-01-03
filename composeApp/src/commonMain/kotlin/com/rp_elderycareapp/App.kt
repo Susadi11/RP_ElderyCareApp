@@ -105,10 +105,37 @@ fun App() {
                     }
                 }
                 composable(NavRoutes.MMSE_START_TEST.route) {
-                    Box(modifier = Modifier.padding(innerPadding)) {
-                        MmseStartTestScreen()
-                    }
+                    MmseStartTestScreen(
+                        onNavigateBack = {
+                            navController.popBackStack()
+                        },
+                        onStartTest = {
+                            // ✅ Navigate to questions screen
+                            navController.navigate(NavRoutes.MMSE_QUESTIONS.route)
+                        },
+                        onTalkWithUs = {
+                            navController.navigate(NavRoutes.CHAT.route)
+                        }
+                    )
                 }
+                composable(NavRoutes.MMSE_QUESTIONS.route) {
+                    MmseQuestionsScreen(
+                        onNavigateBack = {
+                            navController.popBackStack()
+                        },
+                        onTalkWithUs = {
+                            navController.navigate(NavRoutes.CHAT.route)
+                        },
+                        onComplete = {
+                            // TODO: Navigate to results/score screen
+                            // For now, go back to MMSE test screen
+                            navController.navigate(NavRoutes.MMSE_QUESTIONS.route) {
+                                popUpTo(NavRoutes.MMSE_TEST.route)
+                            }
+                        }
+                    )
+                }
+
                 composable(NavRoutes.REMINDER.route) {
                     Box(modifier = Modifier.padding(innerPadding)) {
                         ReminderScreen()
