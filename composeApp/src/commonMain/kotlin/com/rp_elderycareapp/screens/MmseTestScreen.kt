@@ -28,7 +28,8 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun MmseTestScreen(
-    onNavigateToScoreTrend: () -> Unit = {}
+    onNavigateToScoreTrend: () -> Unit = {},
+    onStartAssessmentClick: () -> Unit = {}
 ) {
     // Animation for entrance
     val offsetY = remember { Animatable(50f) }
@@ -101,7 +102,7 @@ fun MmseTestScreen(
             Spacer(modifier = Modifier.height(48.dp))
 
             // Main Test Card
-            MmseTestCard(alpha = alpha.value)
+            MmseTestCard(alpha = alpha.value, onStartAssessmentClick = onStartAssessmentClick)
 
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -149,7 +150,7 @@ private fun LogoSection(alpha: Float) {
 }
 
 @Composable
-private fun MmseTestCard(alpha: Float) {
+private fun MmseTestCard(alpha: Float, onStartAssessmentClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -215,7 +216,7 @@ private fun MmseTestCard(alpha: Float) {
 
             // Start Assessment Button
             Button(
-                onClick = { /* TODO: Implement navigation to test */ },
+                onClick = onStartAssessmentClick,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
