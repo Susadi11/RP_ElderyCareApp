@@ -99,7 +99,14 @@ fun App() {
                 }
                 composable(NavRoutes.MMSE_TEST.route) {
                     Box(modifier = Modifier.padding(innerPadding)) {
-                        MmseTestScreen()
+                        MmseTestScreen(
+                            onStartAssessmentClick = { navController.navigate(NavRoutes.MMSE_START_TEST.route) }
+                        )
+                    }
+                }
+                composable(NavRoutes.MMSE_START_TEST.route) {
+                    Box(modifier = Modifier.padding(innerPadding)) {
+                        MmseStartTestScreen()
                     }
                 }
                 composable(NavRoutes.REMINDER.route) {
