@@ -1,5 +1,7 @@
 package com.rp_elderycareapp.data.reminder
 
+import com.rp_elderycareapp.getApiBaseUrl
+import com.rp_elderycareapp.ApiConfig
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -10,11 +12,8 @@ import kotlinx.serialization.json.Json
 
 class ReminderApiService {
     
-    // IMPORTANT: 
-    // - For Android Emulator: use http://10.0.2.2:8000/api/reminders
-    // - For Real Android Device: use your computer's IP address (below)
-    // Find your IP: Windows CMD -> ipconfig | find "IPv4"
-    private val baseUrl = "http://10.0.2.2:8000/api/reminders"
+    // Using base URL from Constants.kt - automatically configured for emulator/physical device
+    private val baseUrl = getApiBaseUrl() + ApiConfig.Endpoints.REMINDERS
     
     private val client = HttpClient {
         install(ContentNegotiation) {
@@ -72,7 +71,7 @@ class ReminderApiService {
     ): Result<AudioReminderResponse> {
         return try {
             val boundary = "----WebKitFormBoundary${System.currentTimeMillis()}"
-            val response = client.post("http://10.0.2.2:8000/api/reminders/create-from-audio") {
+            val response = client.post("$baseUrl/create-from-audio") {
                 setBody(buildMultipartFormData(boundary, audioFile, fileName, userId, priority, caregiverIds))
                 contentType(ContentType.parse("multipart/form-data; boundary=$boundary"))
             }
