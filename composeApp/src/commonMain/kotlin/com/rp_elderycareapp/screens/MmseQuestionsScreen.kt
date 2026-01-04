@@ -1,16 +1,18 @@
 package com.rp_elderycareapp.screens
 
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.SupportAgent
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,19 +21,21 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.rp_elderycareapp.data.MmseQuestion
+import com.rp_elderycareapp.data.MmseQuestions
+import com.rp_elderycareapp.platform.loadImageResource
+import com.rp_elderycareapp.platform.rememberTextToSpeech
 import kotlinx.coroutines.launch
-import com.rp_elderycareapp.data.MmseQuestions  // Import from data structures
-import com.rp_elderycareapp.data.MmseScoringGuide   // Import from data structures
 
-// State for voice recording
 enum class RecordingState {
-    IDLE,           // Not recording - shows "Tap to Answer"
-    LISTENING,      // Recording - shows "Listening..."
-    RECORDED        // Answer recorded - shows answer text
+    IDLE,
+    LISTENING,
+    RECORDED
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -41,7 +45,6 @@ fun MmseQuestionsScreen(
     onTalkWithUs: () -> Unit = {},
     onComplete: (totalScore: Int) -> Unit = {}
 ) {
-    // Use questions from MmseDataStructures
     val questions = remember { MmseQuestions.allQuestions }
 
     var currentQuestionIndex by remember { mutableStateOf(0) }
@@ -50,7 +53,8 @@ fun MmseQuestionsScreen(
     var currentScore by remember { mutableStateOf(0) }
     val scrollState = rememberScrollState()
 
-    // Animation for entrance
+    val textToSpeech = rememberTextToSpeech()
+
     val offsetY = remember { Animatable(50f) }
     val alpha = remember { Animatable(0f) }
 
@@ -70,6 +74,18 @@ fun MmseQuestionsScreen(
     }
 
     val currentQuestion = questions[currentQuestionIndex]
+
+    val playQuestionAudio = {
+        val textToSpeak = when (currentQuestionIndex) {
+            13, 14 -> "What is this called?"
+            else -> currentQuestion.question
+        }
+        textToSpeech.speak(textToSpeak)
+    }
+
+    LaunchedEffect(currentQuestionIndex) {
+        playQuestionAudio()
+    }
 
     Scaffold(
         modifier = Modifier
@@ -102,7 +118,6 @@ fun MmseQuestionsScreen(
                 .graphicsLayer { this.alpha = alpha.value },
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Question Header with Progress
             QuestionHeader(
                 currentQuestion = currentQuestionIndex + 1,
                 totalQuestions = questions.size,
@@ -111,36 +126,31 @@ fun MmseQuestionsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Question Card
-            QuestionCard(
-                question = currentQuestion.question,
+            QuestionCardWithImage(
+                question = currentQuestion,
+                questionIndex = currentQuestionIndex,
                 recordedAnswer = if (recordingState == RecordingState.RECORDED) recordedAnswer else null,
-                onPlayAudio = {
-                    // TODO: Implement text-to-speech
-                }
+                onPlayAudio = playQuestionAudio
             )
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Microphone Button
             MicrophoneButton(
                 recordingState = recordingState,
                 onClick = {
                     when (recordingState) {
                         RecordingState.IDLE -> {
                             recordingState = RecordingState.LISTENING
-                            // TODO: Start voice recording
-
-                            // Simulate recording completion after 2 seconds
+                            // TODO: Start actual voice recording
                             kotlinx.coroutines.GlobalScope.launch {
                                 kotlinx.coroutines.delay(2000)
-                                recordedAnswer = "2024" // Replace with actual transcribed text
+                                recordedAnswer = "watch" // Replace with actual transcription
                                 recordingState = RecordingState.RECORDED
                             }
                         }
                         RecordingState.LISTENING -> {
                             recordingState = RecordingState.RECORDED
-                            recordedAnswer = "2024" // Replace with actual transcribed text
+                            recordedAnswer = "watch"
                         }
                         RecordingState.RECORDED -> {
                             recordingState = RecordingState.LISTENING
@@ -152,12 +162,10 @@ fun MmseQuestionsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Submit or Repeat Button
             if (recordingState == RecordingState.RECORDED) {
                 SubmitAnswerButton(
                     onClick = {
-                        // TODO: Calculate points for this answer
-                        val pointsEarned = 1 // Replace with actual scoring
+                        val pointsEarned = 1 // TODO: Calculate actual score
                         currentScore += pointsEarned
 
                         if (currentQuestionIndex < questions.size - 1) {
@@ -165,7 +173,6 @@ fun MmseQuestionsScreen(
                             recordingState = RecordingState.IDLE
                             recordedAnswer = ""
                         } else {
-                            // Test completed
                             onComplete(currentScore)
                         }
                     }
@@ -175,14 +182,11 @@ fun MmseQuestionsScreen(
             }
 
             RepeatQuestionButton(
-                onClick = {
-                    // TODO: Replay question audio
-                }
+                onClick = playQuestionAudio
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Talk with Us Button
             TalkWithUsButton(onClick = onTalkWithUs)
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -228,7 +232,6 @@ private fun QuestionHeader(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Progress Bar
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -257,8 +260,9 @@ private fun QuestionHeader(
 }
 
 @Composable
-private fun QuestionCard(
-    question: String,
+private fun QuestionCardWithImage(
+    question: MmseQuestion,
+    questionIndex: Int,
     recordedAnswer: String?,
     onPlayAudio: () -> Unit
 ) {
@@ -280,36 +284,53 @@ private fun QuestionCard(
                 .padding(32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = question,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF1A1A2E),
-                textAlign = TextAlign.Center,
-                lineHeight = 28.sp
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Audio Play Button
-            IconButton(
-                onClick = onPlayAudio,
-                modifier = Modifier
-                    .size(64.dp)
-                    .background(
-                        color = Color(0xFFE3F2FD),
-                        shape = CircleShape
-                    )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.VolumeUp,
-                    contentDescription = "Play Question",
-                    tint = Color(0xFF3B82F6),
-                    modifier = Modifier.size(32.dp)
+            if (questionIndex != 13 && questionIndex != 14) {
+                Text(
+                    text = question.question,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF1A1A2E),
+                    textAlign = TextAlign.Center,
+                    lineHeight = 28.sp
                 )
+                Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // Show recorded answer if available
+            when (questionIndex) {
+                13 -> { // Question 14 - Wristwatch
+                    ObjectImageDisplay(
+                        imageType = "watch",
+                        label = "Wristwatch",
+                        onPlayAudio = onPlayAudio
+                    )
+                }
+                14 -> { // Question 15 - Pencil
+                    ObjectImageDisplay(
+                        imageType = "pencil",
+                        label = "Pencil",
+                        onPlayAudio = onPlayAudio
+                    )
+                }
+                else -> {
+                    IconButton(
+                        onClick = onPlayAudio,
+                        modifier = Modifier
+                            .size(64.dp)
+                            .background(
+                                color = Color(0xFFE3F2FD),
+                                shape = CircleShape
+                            )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.VolumeUp,
+                            contentDescription = "Play Question",
+                            tint = Color(0xFF3B82F6),
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                }
+            }
+
             if (recordedAnswer != null) {
                 Spacer(modifier = Modifier.height(20.dp))
 
@@ -338,6 +359,83 @@ private fun QuestionCard(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ObjectImageDisplay(
+    imageType: String,
+    label: String,
+    onPlayAudio: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        IconButton(
+            onClick = onPlayAudio,
+            modifier = Modifier
+                .size(56.dp)
+                .shadow(
+                    elevation = 4.dp,
+                    shape = CircleShape
+                )
+                .background(
+                    color = Color(0xFFE3F2FD),
+                    shape = CircleShape
+                )
+        ) {
+            Icon(
+                imageVector = Icons.Default.VolumeUp,
+                contentDescription = "Play Question",
+                tint = Color(0xFF3B82F6),
+                modifier = Modifier.size(28.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Card(
+            modifier = Modifier
+                .size(260.dp)
+                .shadow(
+                    elevation = 12.dp,
+                    shape = RoundedCornerShape(24.dp)
+                ),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color.White
+            )
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.White)
+                    .border(
+                        width = 4.dp,
+                        color = Color(0xFF4A9FFF),
+                        shape = RoundedCornerShape(24.dp)
+                    )
+                    .padding(28.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = loadImageResource(imageType),
+                    contentDescription = label,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Text(
+            text = "What is this called?",
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF1A1A2E),
+            textAlign = TextAlign.Center
+        )
     }
 }
 
