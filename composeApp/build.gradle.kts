@@ -72,10 +72,11 @@ kotlin {
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(libs.androidx.navigation.compose)
             implementation(libs.kotlinx.datetime)
-            implementation(libs.kotlinx.serialization.json)
+            implementation(libs.kotlinx.serializationJson)
             implementation(libs.ktor.clientCore)
             implementation(libs.ktor.clientContentNegotiation)
             implementation(libs.ktor.serializationJson)
+            implementation(libs.ktor.clientWebsockets)
             implementation(projects.shared)
         }
         commonTest.dependencies {
@@ -87,7 +88,7 @@ kotlin {
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
-            implementation(libs.ktor.clientJava)
+            implementation(libs.ktor.clientOkHttp)
         }
         wasmJsMain.dependencies {
             implementation(libs.ktor.clientJs)

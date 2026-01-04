@@ -25,12 +25,14 @@ fun App() {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route
         
-        // Hide bottom bar on auth screens, chat, settings, and profile screens
+        // Hide bottom bar on auth screens, chat, settings, profile, and reminder dashboard screens
         val showBottomBar = currentRoute != NavRoutes.LOGIN.route &&
                            currentRoute != NavRoutes.SIGNUP.route &&
                            currentRoute != NavRoutes.CHAT.route &&
                            currentRoute != NavRoutes.SETTINGS.route &&
-                           currentRoute != NavRoutes.PROFILE.route
+                           currentRoute != NavRoutes.PROFILE.route &&
+                           currentRoute != NavRoutes.PATIENT_DASHBOARD.route &&
+                           currentRoute != NavRoutes.CAREGIVER_ALERTS.route
         
         Scaffold(
             modifier = Modifier.fillMaxSize(),
@@ -140,6 +142,18 @@ fun App() {
                     Box(modifier = Modifier.padding(innerPadding)) {
                         ReminderScreen()
                     }
+                }
+                composable(NavRoutes.PATIENT_DASHBOARD.route) {
+                    // Dashboard screen takes full height
+                    PatientDashboardScreen(
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+                composable(NavRoutes.CAREGIVER_ALERTS.route) {
+                    // Caregiver alerts screen takes full height
+                    CaregiverAlertScreen(
+                        onNavigateBack = { navController.popBackStack() }
+                    )
                 }
                 composable(NavRoutes.SETTINGS.route) {
                     // Settings screen takes full height (no bottom padding)
