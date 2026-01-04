@@ -126,13 +126,18 @@ fun App() {
                         onTalkWithUs = {
                             navController.navigate(NavRoutes.CHAT.route)
                         },
-                        onComplete = {
-                            // TODO: Navigate to results/score screen
-                            // For now, go back to MMSE test screen
-                            navController.navigate(NavRoutes.MMSE_QUESTIONS.route) {
-                                popUpTo(NavRoutes.MMSE_TEST.route)
+                        onComplete = { totalScore ->
+                            navController.navigate("mmse_results/$totalScore") {
+                                popUpTo(NavRoutes.MMSE_TEST.route) { inclusive = false }
                             }
                         }
+                    )
+                }
+                composable(NavRoutes.MMSE_RESULTS.route) { backStackEntry ->
+                    val totalScore = backStackEntry.arguments?.getString("totalScore")?.toIntOrNull() ?: 0
+                    MmseResultScreen(
+                        totalScore = totalScore,
+                        onNavigateBack = { navController.popBackStack(NavRoutes.MMSE_TEST.route, false) }
                     )
                 }
 

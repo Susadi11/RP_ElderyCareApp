@@ -9,6 +9,7 @@ enum class NavRoutes(val route: String) {
     MMSE_TEST("mmse_test"),
 
     MMSE_QUESTIONS("mmse_questions"),
+    MMSE_RESULTS("mmse_results/{totalScore}"),
     MMSE_START_TEST("mmse_start_test"),
     REMINDER("reminder"),
     SETTINGS("settings"),
