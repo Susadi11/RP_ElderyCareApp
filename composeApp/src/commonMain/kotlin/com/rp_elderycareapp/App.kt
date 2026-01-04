@@ -14,13 +14,7 @@ import androidx.navigation.compose.rememberNavController
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import com.rp_elderycareapp.components.BottomNavigationBar
 import com.rp_elderycareapp.navigation.NavRoutes
-import com.rp_elderycareapp.screens.ChatScreen
-import com.rp_elderycareapp.screens.GameScreen
-import com.rp_elderycareapp.screens.HomeScreen
-import com.rp_elderycareapp.screens.MmseTestScreen
-import com.rp_elderycareapp.screens.ReminderScreen
-import com.rp_elderycareapp.screens.SettingsScreen
-import com.rp_elderycareapp.screens.ProfileScreen
+import com.rp_elderycareapp.screens.*
 import com.rp_elderycareapp.ui.theme.ElderyCareTheme
 
 @Composable
@@ -31,10 +25,12 @@ fun App() {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route
         
-        // Hide bottom bar on chat screen, settings screen, and profile screen
+        // Hide bottom bar on chat screen, settings screen, profile screen, and new reminder screens
         val showBottomBar = currentRoute != NavRoutes.CHAT.route && 
                            currentRoute != NavRoutes.SETTINGS.route && 
-                           currentRoute != NavRoutes.PROFILE.route
+                           currentRoute != NavRoutes.PROFILE.route &&
+                           currentRoute != NavRoutes.PATIENT_DASHBOARD.route &&
+                           currentRoute != NavRoutes.CAREGIVER_ALERTS.route
         
         Scaffold(
             modifier = Modifier.fillMaxSize(),
@@ -80,6 +76,18 @@ fun App() {
                     Box(modifier = Modifier.padding(innerPadding)) {
                         ReminderScreen()
                     }
+                }
+                composable(NavRoutes.PATIENT_DASHBOARD.route) {
+                    // Dashboard screen takes full height
+                    PatientDashboardScreen(
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+                composable(NavRoutes.CAREGIVER_ALERTS.route) {
+                    // Caregiver alerts screen takes full height
+                    CaregiverAlertScreen(
+                        onNavigateBack = { navController.popBackStack() }
+                    )
                 }
                 composable(NavRoutes.SETTINGS.route) {
                     // Settings screen takes full height (no bottom padding)

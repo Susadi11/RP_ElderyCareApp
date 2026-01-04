@@ -6,6 +6,8 @@ enum class NavRoutes(val route: String) {
     GAME("game"),
     MMSE_TEST("mmse_test"),
     REMINDER("reminder"),
+    PATIENT_DASHBOARD("patient_dashboard"),
+    CAREGIVER_ALERTS("caregiver_alerts"),
     SETTINGS("settings"),
     PROFILE("profile")
 }
