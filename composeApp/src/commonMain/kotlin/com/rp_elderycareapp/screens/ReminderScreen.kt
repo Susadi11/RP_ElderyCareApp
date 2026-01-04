@@ -34,14 +34,14 @@ fun ReminderScreen() {
     val alarmManager = rememberPlatformAlarmManager()
     val audioRecorder = rememberAudioRecorder()
     val viewModel = remember { ReminderViewModel(alarmManager) }
-    val userId = "patient_001" // In production, get from auth/session
+    val userId = "patient_001" 
     val scope = rememberCoroutineScope()
     
     val activeAlarm by viewModel.activeAlarm.collectAsState()
     
     var selectedTab by remember { mutableStateOf(0) }
     var showCreateDialog by remember { mutableStateOf(false) }
-    var showVoiceDialog by remember { mutableStateOf(false) }
+    var showReminderOptionsDialog by remember { mutableStateOf(false) }
     var showAudioRecorderDialog by remember { mutableStateOf(false) }
     
     LaunchedEffect(Unit) {
@@ -69,24 +69,10 @@ fun ReminderScreen() {
                     titleContentColor = Color.White
                 ),
                 actions = {
-                    IconButton(onClick = { showAudioRecorderDialog = true }) {
-                        Icon(
-                            Icons.Default.Mic,
-                            contentDescription = "Record voice reminder",
-                            tint = Color.White
-                        )
-                    }
-                    IconButton(onClick = { showVoiceDialog = true }) {
-                        Icon(
-                            Icons.Default.TextFields,
-                            contentDescription = "Type voice command",
-                            tint = Color.White
-                        )
-                    }
-                    IconButton(onClick = { showCreateDialog = true }) {
+                    IconButton(onClick = { showReminderOptionsDialog = true }) {
                         Icon(
                             Icons.Default.Add,
-                            contentDescription = "Create reminder",
+                            contentDescription = "Add reminder",
                             tint = Color.White
                         )
                     }
@@ -202,41 +188,17 @@ fun ReminderScreen() {
             )
         }
         
-        // Create reminder dialog
-        if (showCreateDialog) {
-            CreateReminderDialog(
-                onDismiss = { 
-                    println("Dialog dismissed")
-                    showCreateDialog = false 
+        // Reminder options dialog - Choose between manual or voice recording
+        if (showReminderOptionsDialog) {
+            ReminderOptionsDialog(
+                onDismiss = { showReminderOptionsDialog = false },
+                onManualCreate = {
+                    showReminderOptionsDialog = false
+                    showCreateDialog = true
                 },
-                onCreate = { request ->
-                    println("Create button clicked")
-                    showCreateDialog = false  // Close immediately
-                    viewModel.createReminder(request) {
-                        println("Reminder creation completed")
-                        // Reload to ensure we have latest
-                        viewModel.loadReminders(userId, "active")
-                    }
-                },
-                userId = userId
-            )
-        }
-        
-        // Voice command dialog
-        if (showVoiceDialog) {
-            VoiceCommandDialog(
-                onDismiss = { showVoiceDialog = false },
-                onCreate = { command ->
-                    scope.launch {
-                        viewModel.createReminderFromVoice(
-                            NaturalLanguageReminderRequest(
-                                userId = userId,
-                                commandText = command
-                            )
-                        ) { reminder ->
-                            showVoiceDialog = false
-                        }
-                    }
+                onVoiceRecording = {
+                    showReminderOptionsDialog = false
+                    showAudioRecorderDialog = true
                 }
             )
         }
@@ -259,9 +221,28 @@ fun ReminderScreen() {
                             },
                             onError = { error ->
                                 println("❌ Error: $error")
-                                // Keep dialog open to show error
                             }
                         )
+                    }
+                },
+                userId = userId
+            )
+        }
+        
+        // Create reminder dialog
+        if (showCreateDialog) {
+            CreateReminderDialog(
+                onDismiss = { 
+                    println("Dialog dismissed")
+                    showCreateDialog = false 
+                },
+                onCreate = { request ->
+                    println("Create button clicked")
+                    showCreateDialog = false  // Close immediately
+                    viewModel.createReminder(request) {
+                        println("Reminder creation completed")
+                        // Reload to ensure we have latest
+                        viewModel.loadReminders(userId, "active")
                     }
                 },
                 userId = userId
@@ -289,6 +270,118 @@ fun ReminderScreen() {
             )
         }
     }
+}
+
+@Composable
+private fun ReminderOptionsDialog(
+    onDismiss: () -> Unit,
+    onManualCreate: () -> Unit,
+    onVoiceRecording: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                "Add New Reminder",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    "Choose how you want to create your reminder:",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                
+                // Voice Recording Option
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(80.dp),
+                    onClick = onVoiceRecording,
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Mic,
+                            contentDescription = null,
+                            modifier = Modifier.size(32.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Column {
+                            Text(
+                                "Voice Recording",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                "Record your reminder instructions",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+                
+                // Manual Entry Option
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(80.dp),
+                    onClick = onManualCreate,
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = null,
+                            modifier = Modifier.size(32.dp),
+                            tint = MaterialTheme.colorScheme.secondary
+                        )
+                        Column {
+                            Text(
+                                "Manual Entry",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                "Fill in reminder details manually",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable
