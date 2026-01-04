@@ -252,3 +252,14 @@ data class WebSocketMessage(
     val type: String,  // "reminder", "alert", "update"
     val data: String   // JSON string of reminder or alert
 )
+
+// Audio reminder response from voice recording
+@Serializable
+data class AudioReminderResponse(
+    val status: String,
+    val message: String,
+    val reminder: Reminder,
+    val transcription: String,
+    @SerialName("audio_file")
+    val audioFile: String
+)

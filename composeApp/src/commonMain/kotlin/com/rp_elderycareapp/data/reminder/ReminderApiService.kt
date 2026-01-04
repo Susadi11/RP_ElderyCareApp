@@ -62,6 +62,73 @@ class ReminderApiService {
         }
     }
     
+    // 2b. Create reminder from audio file (voice recording)
+    suspend fun createReminderFromAudio(
+        audioFile: ByteArray,
+        fileName: String,
+        userId: String,
+        priority: String? = null,
+        caregiverIds: String? = null
+    ): Result<AudioReminderResponse> {
+        return try {
+            val boundary = "----WebKitFormBoundary${System.currentTimeMillis()}"
+            val response = client.post("http://192.168.1.7:8000/api/reminders/create-from-audio") {
+                setBody(buildMultipartFormData(boundary, audioFile, fileName, userId, priority, caregiverIds))
+                contentType(ContentType.parse("multipart/form-data; boundary=$boundary"))
+            }
+            
+            println("Audio upload response status: ${response.status}")
+            val audioResponse: AudioReminderResponse = response.body()
+            println("Transcription: ${audioResponse.transcription}")
+            Result.success(audioResponse)
+        } catch (e: Exception) {
+            println("Audio upload error: ${e.message}")
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+    
+    private fun buildMultipartFormData(
+        boundary: String,
+        audioFile: ByteArray,
+        fileName: String,
+        userId: String,
+        priority: String?,
+        caregiverIds: String?
+    ): ByteArray {
+        val builder = StringBuilder()
+        val lineBreak = "\r\n"
+        
+        // Add user_id field
+        builder.append("--$boundary$lineBreak")
+        builder.append("Content-Disposition: form-data; name=\"user_id\"$lineBreak$lineBreak")
+        builder.append("$userId$lineBreak")
+        
+        // Add priority if present
+        if (priority != null) {
+            builder.append("--$boundary$lineBreak")
+            builder.append("Content-Disposition: form-data; name=\"priority\"$lineBreak$lineBreak")
+            builder.append("$priority$lineBreak")
+        }
+        
+        // Add caregiver_ids if present
+        if (caregiverIds != null) {
+            builder.append("--$boundary$lineBreak")
+            builder.append("Content-Disposition: form-data; name=\"caregiver_ids\"$lineBreak$lineBreak")
+            builder.append("$caregiverIds$lineBreak")
+        }
+        
+        // Add file
+        builder.append("--$boundary$lineBreak")
+        builder.append("Content-Disposition: form-data; name=\"file\"; filename=\"$fileName\"$lineBreak")
+        builder.append("Content-Type: audio/3gpp$lineBreak$lineBreak")
+        
+        val header = builder.toString().toByteArray(Charsets.UTF_8)
+        val footer = "$lineBreak--$boundary--$lineBreak".toByteArray(Charsets.UTF_8)
+        
+        return header + audioFile + footer
+    }
+    
     // 3. Get all reminders for a user
     suspend fun getUserReminders(userId: String, statusFilter: String? = null): Result<List<Reminder>> {
         return try {

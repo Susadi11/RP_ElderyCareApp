@@ -151,6 +151,57 @@ class ReminderViewModel(private val alarmManager: PlatformAlarmManager? = null) 
         }
     }
     
+    // Create reminder from audio file (voice recording)
+    fun createReminderFromAudio(
+        audioFilePath: String,
+        userId: String,
+        priority: String? = null,
+        onSuccess: (AudioReminderResponse) -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
+        scope.launch {
+            try {
+                // Read audio file as bytes
+                val audioFile = java.io.File(audioFilePath)
+                if (!audioFile.exists()) {
+                    onError("Audio file not found")
+                    reminderState = ReminderUiState.Error("Audio file not found")
+                    return@launch
+                }
+                
+                val audioBytes = audioFile.readBytes()
+                val fileName = audioFile.name
+                
+                println("Uploading audio file: $fileName (${audioBytes.size} bytes)")
+                
+                apiService.createReminderFromAudio(
+                    audioFile = audioBytes,
+                    fileName = fileName,
+                    userId = userId,
+                    priority = priority
+                )
+                    .onSuccess { response ->
+                        println("Audio reminder created successfully!")
+                        println("Transcription: ${response.transcription}")
+                        loadReminders(userId, "active")
+                        onSuccess(response)
+                    }
+                    .onFailure { error ->
+                        println("Failed to create audio reminder: ${error.message}")
+                        val errorMsg = error.message ?: "Failed to create reminder from audio"
+                        reminderState = ReminderUiState.Error(errorMsg)
+                        onError(errorMsg)
+                    }
+            } catch (e: Exception) {
+                println("Exception reading audio file: ${e.message}")
+                e.printStackTrace()
+                val errorMsg = "Failed to read audio file: ${e.message}"
+                reminderState = ReminderUiState.Error(errorMsg)
+                onError(errorMsg)
+            }
+        }
+    }
+    
     // Respond to a reminder
     fun respondToReminder(request: ReminderResponseRequest, onComplete: (ReminderResponseResult) -> Unit = {}) {
         scope.launch {

@@ -20,16 +20,19 @@ import androidx.compose.ui.unit.dp
 import com.rp_elderycareapp.components.reminder.ReminderCard
 import com.rp_elderycareapp.components.reminder.ReminderResponseDialog
 import com.rp_elderycareapp.components.reminder.AlarmDialog
+import com.rp_elderycareapp.components.reminder.AudioRecorderDialog
 import com.rp_elderycareapp.data.reminder.*
 import com.rp_elderycareapp.viewmodel.ReminderViewModel
 import com.rp_elderycareapp.viewmodel.ReminderUiState
 import com.rp_elderycareapp.services.rememberPlatformAlarmManager
+import com.rp_elderycareapp.services.rememberAudioRecorder
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReminderScreen() {
     val alarmManager = rememberPlatformAlarmManager()
+    val audioRecorder = rememberAudioRecorder()
     val viewModel = remember { ReminderViewModel(alarmManager) }
     val userId = "patient_001" // In production, get from auth/session
     val scope = rememberCoroutineScope()
@@ -39,6 +42,7 @@ fun ReminderScreen() {
     var selectedTab by remember { mutableStateOf(0) }
     var showCreateDialog by remember { mutableStateOf(false) }
     var showVoiceDialog by remember { mutableStateOf(false) }
+    var showAudioRecorderDialog by remember { mutableStateOf(false) }
     
     LaunchedEffect(Unit) {
         viewModel.loadReminders(userId)
@@ -65,10 +69,17 @@ fun ReminderScreen() {
                     titleContentColor = Color.White
                 ),
                 actions = {
-                    IconButton(onClick = { showVoiceDialog = true }) {
+                    IconButton(onClick = { showAudioRecorderDialog = true }) {
                         Icon(
                             Icons.Default.Mic,
-                            contentDescription = "Voice command",
+                            contentDescription = "Record voice reminder",
+                            tint = Color.White
+                        )
+                    }
+                    IconButton(onClick = { showVoiceDialog = true }) {
+                        Icon(
+                            Icons.Default.TextFields,
+                            contentDescription = "Type voice command",
                             tint = Color.White
                         )
                     }
@@ -227,6 +238,33 @@ fun ReminderScreen() {
                         }
                     }
                 }
+            )
+        }
+        
+        // Audio recorder dialog
+        if (showAudioRecorderDialog) {
+            AudioRecorderDialog(
+                audioRecorder = audioRecorder,
+                onDismiss = { showAudioRecorderDialog = false },
+                onSubmit = { audioFilePath ->
+                    scope.launch {
+                        viewModel.createReminderFromAudio(
+                            audioFilePath = audioFilePath,
+                            userId = userId,
+                            priority = "medium",
+                            onSuccess = { response ->
+                                println("✅ Reminder created from audio!")
+                                println("Transcription: ${response.transcription}")
+                                showAudioRecorderDialog = false
+                            },
+                            onError = { error ->
+                                println("❌ Error: $error")
+                                // Keep dialog open to show error
+                            }
+                        )
+                    }
+                },
+                userId = userId
             )
         }
         
