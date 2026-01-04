@@ -6,6 +6,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import com.rp_elderycareapp.ui.theme.AppColors
+import com.rp_elderycareapp.PreferencesManager
 
 @Composable
 actual fun ProfileUserIcon() {
@@ -50,4 +51,17 @@ actual fun ProfileLogoutIcon() {
         contentDescription = "Logout",
         tint = Color.Red
     )
+}
+@Composable
+actual fun ProfileSettingsIcon() {
+    Icon(
+        imageVector = Icons.Default.Settings,
+        contentDescription = "Settings",
+        tint = AppColors.PrimaryText
+    )
+}
+
+@Composable
+actual fun getPreferencesManager(): PreferencesManager {
+    return PreferencesManager()
 }

@@ -6,9 +6,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.rp_elderycareapp.R
+import com.rp_elderycareapp.PreferencesManager
 
 @Composable
 actual fun ProfileUserIcon() {
@@ -58,3 +60,20 @@ actual fun ProfileLogoutIcon() {
     )
 }
 
+@Composable
+actual fun ProfileSettingsIcon() {
+    Image(
+        painter = painterResource(R.drawable.outline_settings_24),
+        contentDescription = "Settings",
+        modifier = Modifier.size(22.dp)
+    )
+}
+
+@Composable
+actual fun getPreferencesManager(): PreferencesManager {
+    val context = LocalContext.current
+    val prefsManager = PreferencesManager(context)
+    // Initialize the global instance for API base URL
+    com.rp_elderycareapp.initializePreferencesManager(prefsManager)
+    return prefsManager
+}

@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rp_elderycareapp.ui.theme.AppColors
+import com.rp_elderycareapp.PreferencesManager
 
 @Composable
 expect fun ProfileUserIcon()
@@ -37,10 +38,20 @@ expect fun ProfileDeleteIcon()
 expect fun ProfileLogoutIcon()
 
 @Composable
+expect fun ProfileSettingsIcon()
+
+@Composable
+expect fun getPreferencesManager(): PreferencesManager
+
+@Composable
 fun ProfileScreen(
     onNavigateBack: () -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
+    val preferencesManager = getPreferencesManager()
+    var showBaseUrlDialog by remember { mutableStateOf(false) }
+    var baseUrlInput by remember { mutableStateOf("") }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -182,6 +193,16 @@ fun ProfileScreen(
                         )
                         ProfileDivider()
                         ProfileActionItem(
+                            title = "Change Base URL",
+                            iconColor = AppColors.Primary,
+                            onClick = {
+                                baseUrlInput = preferencesManager.getBaseUrl() ?: ""
+                                showBaseUrlDialog = true
+                            },
+                            icon = { ProfileSettingsIcon() }
+                        )
+                        ProfileDivider()
+                        ProfileActionItem(
                             title = "Delete Account",
                             iconColor = Color(0xFFEF4444),
                             onClick = { /* Delete account */ },
@@ -223,6 +244,70 @@ fun ProfileScreen(
                 Spacer(modifier = Modifier.height(20.dp))
             }
         }
+    }
+
+    // Base URL Dialog
+    if (showBaseUrlDialog) {
+        AlertDialog(
+            onDismissRequest = { showBaseUrlDialog = false },
+            title = {
+                Text(
+                    text = "Change Base URL",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "Enter the base URL (including port number):",
+                        fontSize = 14.sp,
+                        color = Color(0xFF6B7280)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = baseUrlInput,
+                        onValueChange = { baseUrlInput = it },
+                        placeholder = { Text("http://localhost:8000") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Leave empty to use default URL",
+                        fontSize = 12.sp,
+                        color = Color(0xFF9CA3AF)
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (baseUrlInput.isNotBlank()) {
+                            preferencesManager.saveBaseUrl(baseUrlInput.trim())
+                        } else {
+                            preferencesManager.clearBaseUrl()
+                        }
+                        showBaseUrlDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AppColors.Primary
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showBaseUrlDialog = false },
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Cancel", color = Color(0xFF6B7280))
+                }
+            },
+            shape = RoundedCornerShape(20.dp)
+        )
     }
 }
 

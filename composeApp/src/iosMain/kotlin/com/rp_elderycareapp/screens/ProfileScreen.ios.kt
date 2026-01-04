@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.rp_elderycareapp.PreferencesManager
 
 @Composable
 actual fun ProfileUserIcon() {
@@ -55,4 +56,17 @@ actual fun ProfileLogoutIcon() {
         tint = Color(0xFFB91C1C),
         modifier = Modifier.size(20.dp)
     )
+}
+@Composable
+actual fun ProfileSettingsIcon() {
+    Icon(
+        imageVector = Icons.Default.Settings,
+        contentDescription = "Settings",
+        modifier = Modifier.size(22.dp)
+    )
+}
+
+@Composable
+actual fun getPreferencesManager(): PreferencesManager {
+    return PreferencesManager()
 }

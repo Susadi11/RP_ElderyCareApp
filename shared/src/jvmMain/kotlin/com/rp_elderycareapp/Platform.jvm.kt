@@ -6,4 +6,10 @@ class JVMPlatform: Platform {
 
 actual fun getPlatform(): Platform = JVMPlatform()
 
-actual fun getApiBaseUrl(): String = ApiConfig.BASE_URL_LOCALHOST
+// Global preferences manager instance for JVM
+private val preferencesManagerInstance = PreferencesManager()
+
+actual fun getApiBaseUrl(): String {
+    val customUrl = preferencesManagerInstance.getBaseUrl()
+    return customUrl ?: ApiConfig.BASE_URL_LOCALHOST
+}

@@ -8,4 +8,10 @@ class IOSPlatform: Platform {
 
 actual fun getPlatform(): Platform = IOSPlatform()
 
-actual fun getApiBaseUrl(): String = ApiConfig.BASE_URL_LOCALHOST
+// Global preferences manager instance for iOS
+private val preferencesManagerInstance = PreferencesManager()
+
+actual fun getApiBaseUrl(): String {
+    val customUrl = preferencesManagerInstance.getBaseUrl()
+    return customUrl ?: ApiConfig.BASE_URL_LOCALHOST
+}
