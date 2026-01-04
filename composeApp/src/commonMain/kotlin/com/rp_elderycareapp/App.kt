@@ -127,13 +127,6 @@ fun App() {
                         },
                         onTalkWithUs = {
                             navController.navigate(NavRoutes.CHAT.route)
-                        },
-                        onComplete = {
-                            // TODO: Navigate to results/score screen
-                            // For now, go back to MMSE test screen
-                            navController.navigate(NavRoutes.MMSE_QUESTIONS.route) {
-                                popUpTo(NavRoutes.MMSE_TEST.route)
-                            }
                         }
                     )
                 }
