@@ -2,6 +2,7 @@ package com.rp_elderycareapp.services
 
 import com.rp_elderycareapp.data.reminder.Reminder
 import com.rp_elderycareapp.data.reminder.WebSocketMessage
+import com.rp_elderycareapp.getApiBaseUrl
 import io.ktor.client.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.websocket.*
@@ -11,9 +12,10 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.decodeFromString
 
 class ReminderWebSocketService(
-    private val userId: String,
-    private val baseUrl: String = "ws://10.0.2.2:8000"
+    private val userId: String
 ) {
+    // Use base URL from Constants.kt - automatically configured
+    private val baseUrl: String = getApiBaseUrl().replace("http://", "ws://").replace("https://", "wss://")
     private val client = HttpClient {
         install(WebSockets)
     }
@@ -44,11 +46,21 @@ class ReminderWebSocketService(
         websocketJob = scope.launch {
             try {
                 _connectionState.value = ConnectionState.Connecting
-                println("=== Connecting to WebSocket: $baseUrl/ws/user/$userId ===")
+                
+                // Parse host and port from baseUrl (e.g., "ws://172.28.2.178:8000")
+                val url = baseUrl.removePrefix("ws://").removePrefix("wss://")
+                val (host, portStr) = if (":" in url) {
+                    url.split(":", limit = 2)
+                } else {
+                    listOf(url, "80")
+                }
+                val port = portStr.toIntOrNull() ?: 8000
+                
+                println("=== Connecting to WebSocket: $host:$port/ws/user/$userId ===")
                 
                 client.webSocket(
-                    host = "10.0.2.2",
-                    port = 8000,
+                    host = host,
+                    port = port,
                     path = "/ws/user/$userId"
                 ) {
                     session = this
