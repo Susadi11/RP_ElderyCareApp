@@ -165,7 +165,7 @@ fun MmseStartTestScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "10 questions",
+                        text = "20 questions",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
                         color = Color(0xFF9CA3AF)
