@@ -14,7 +14,7 @@ class ReminderApiService {
     // - For Android Emulator: use http://10.0.2.2:8000/api/reminders
     // - For Real Android Device: use your computer's IP address (below)
     // Find your IP: Windows CMD -> ipconfig | find "IPv4"
-    private val baseUrl = "http://192.168.1.7:8000/api/reminders"
+    private val baseUrl = "http://10.0.2.2:8000/api/reminders"
     
     private val client = HttpClient {
         install(ContentNegotiation) {
@@ -72,7 +72,7 @@ class ReminderApiService {
     ): Result<AudioReminderResponse> {
         return try {
             val boundary = "----WebKitFormBoundary${System.currentTimeMillis()}"
-            val response = client.post("http://192.168.1.7:8000/api/reminders/create-from-audio") {
+            val response = client.post("http://10.0.2.2:8000/api/reminders/create-from-audio") {
                 setBody(buildMultipartFormData(boundary, audioFile, fileName, userId, priority, caregiverIds))
                 contentType(ContentType.parse("multipart/form-data; boundary=$boundary"))
             }

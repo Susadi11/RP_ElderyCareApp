@@ -12,7 +12,7 @@ import kotlinx.serialization.decodeFromString
 
 class ReminderWebSocketService(
     private val userId: String,
-    private val baseUrl: String = "ws://192.168.1.7:8000"
+    private val baseUrl: String = "ws://10.0.2.2:8000"
 ) {
     private val client = HttpClient {
         install(WebSockets)
@@ -47,7 +47,7 @@ class ReminderWebSocketService(
                 println("=== Connecting to WebSocket: $baseUrl/ws/user/$userId ===")
                 
                 client.webSocket(
-                    host = "192.168.1.7",
+                    host = "10.0.2.2",
                     port = 8000,
                     path = "/ws/user/$userId"
                 ) {
