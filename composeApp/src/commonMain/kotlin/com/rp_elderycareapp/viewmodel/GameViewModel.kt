@@ -54,7 +54,7 @@ class GameViewModel(
             repository.getMotorBaseline(userId).fold(
                 onSuccess = { response ->
                     _uiState.value = _uiState.value.copy(
-                        motorBaseline = response.motorBaselineMs,
+                        motorBaseline = response.motor_baseline,
                         gameState = GameState.Ready,
                         isLoading = false
                     )
@@ -70,7 +70,7 @@ class GameViewModel(
         }
     }
 
-    fun submitCalibration(tapTimes: List<Int>) {
+    fun submitCalibration(tapTimes: List<Double>) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 gameState = GameState.Calibrating,
@@ -83,7 +83,7 @@ class GameViewModel(
                 if (_uiState.value.isLoading) {
                     // Timeout reached, proceed to game with default baseline
                     _uiState.value = _uiState.value.copy(
-                        motorBaseline = 500.0, // Default baseline
+                        motorBaseline = 0.5, // Default baseline (500ms = 0.5s)
                         gameState = GameState.Ready,
                         isLoading = false
                     )
@@ -94,7 +94,7 @@ class GameViewModel(
                 onSuccess = { response ->
                     timeoutJob.cancel()
                     _uiState.value = _uiState.value.copy(
-                        motorBaseline = response.motorBaselineMs,
+                        motorBaseline = response.motorBaseline,
                         gameState = GameState.Ready,
                         isLoading = false
                     )
@@ -104,7 +104,7 @@ class GameViewModel(
                     timeoutJob.cancel()
                     // Don't show error, just proceed with default baseline
                     _uiState.value = _uiState.value.copy(
-                        motorBaseline = 500.0, // Default baseline
+                        motorBaseline = 0.5, // Default baseline (500ms = 0.5s)
                         gameState = GameState.Ready,
                         isLoading = false
                     )
@@ -115,7 +115,7 @@ class GameViewModel(
 
     fun skipCalibration() {
         _uiState.value = _uiState.value.copy(
-            motorBaseline = 500.0, // Default baseline when skipped
+            motorBaseline = 0.5, // Default baseline when skipped (500ms = 0.5s)
             gameState = GameState.Ready,
             isLoading = false
         )
@@ -133,11 +133,11 @@ class GameViewModel(
 
     fun recordTrial(trial: TrialData) {
         val currentTrials = _uiState.value.trials + trial
-        val newScore = if (trial.result == "hit") _uiState.value.score + 1 else _uiState.value.score
-        val newStreak = if (trial.result == "hit") _uiState.value.streak + 1 else 0
+        val newScore = if (trial.correct) _uiState.value.score + 1 else _uiState.value.score
+        val newStreak = if (trial.correct) _uiState.value.streak + 1 else 0
 
         _uiState.value = _uiState.value.copy(
-            currentTrial = trial.trial,
+            currentTrial = trial.trialNumber,
             trials = currentTrials,
             score = newScore,
             streak = newStreak
@@ -148,15 +148,14 @@ class GameViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
 
-            // Format timestamp using kotlinx.datetime
-            val instant = kotlinx.datetime.Instant.fromEpochMilliseconds(startTime)
-            val startedAt = instant.toString().replace("Z", "+00:00") // ISO 8601 format
-            val durationMs = endTime - startTime
+            // Generate session ID
+            val sessionId = "session_${userId}_${Clock.System.now().toEpochMilliseconds()}"
 
             repository.submitGameSession(
                 userId = userId,
-                startedAt = startedAt,
-                durationMs = durationMs,
+                sessionId = sessionId,
+                gameType = "grid_tap_3x3",
+                level = 1,
                 trials = _uiState.value.trials
             ).fold(
                 onSuccess = { response ->

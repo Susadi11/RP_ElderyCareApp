@@ -2,90 +2,121 @@ package com.rp_elderycareapp.api
 
 import kotlinx.serialization.Serializable
 
-// Calibration Models
+// ============================================================================
+// Calibration Models (matches backend CalibrationRequest/Response)
+// ============================================================================
 @Serializable
 data class CalibrationRequest(
     val userId: String,
-    val device: DeviceInfo,
-    val tapReactionTimesMs: List<Int>
-)
-
-@Serializable
-data class DeviceInfo(
-    val type: String = "android",
-    val screenHz: Int = 60
+    val tapTimes: List<Double>  // Changed from tapReactionTimesMs to match backend
 )
 
 @Serializable
 data class CalibrationResponse(
     val userId: String,
-    val motorBaselineMs: Double,
-    val calibratedAt: String
+    val motorBaseline: Double,  // Changed from motorBaselineMs to match backend
+    val calibrationDate: String  // Changed from calibratedAt to match backend
 )
 
-// Session Models
+// ============================================================================
+// Motor Baseline Response (matches backend GET /game/motor-baseline)
+// ============================================================================
+@Serializable
+data class MotorBaselineResponse(
+    val userId: String,
+    val motor_baseline: Double?,  // Backend uses snake_case
+    val n_taps: Int? = null,
+    val created_at: String? = null,
+    val message: String? = null
+)
+
+// ============================================================================
+// Session Models (matches backend GameSessionRequest/Response)
+// ============================================================================
 @Serializable
 data class GameSessionRequest(
     val userId: String,
-    val gameType: String = "grid_tap_3x3",
-    val startedAt: String,
-    val durationMs: Long,
-    val trials: List<TrialData>
+    val sessionId: String,
+    val gameType: String,
+    val level: Int,
+    val trials: List<TrialData>? = null,
+    val summary: SessionSummary? = null
 )
 
 @Serializable
 data class TrialData(
-    val trial: Int,
-    val targetIndex: Int,
-    val shownAtMs: Long,
-    val tapIndex: Int?,
-    val tapAtMs: Long?,
-    val rtRawMs: Int?,
-    val result: String // "hit", "wrong", "miss"
+    val trialNumber: Int,
+    val targetPosition: Int,
+    val reactionTime: Double,
+    val correct: Boolean,
+    val timestamp: Long
+)
+
+@Serializable
+data class SessionSummary(
+    val totalTrials: Int,
+    val correctTrials: Int,
+    val avgReactionTime: Double,
+    val duration: Long
 )
 
 @Serializable
 data class GameSessionResponse(
     val sessionId: String,
-    val accuracy: Double,
-    val avgRtMs: Double,
-    val sac: Double,
-    val ies: Double,
-    val message: String
+    val userId: String,
+    val features: SessionFeatures,
+    val prediction: RiskPrediction,
+    val timestamp: String
 )
 
-// Stats Models
+@Serializable
+data class SessionFeatures(
+    val sac: Double,
+    val ies: Double,
+    val accuracy: Double,
+    val avgReactionTime: Double,
+    val rtVariability: Double
+)
+
+@Serializable
+data class RiskPrediction(
+    val riskLevel: String,  // "LOW", "MEDIUM", "HIGH"
+    val riskScore0_100: Double,
+    val probabilities: Map<String, Double>? = null
+)
+
+// ============================================================================
+// Stats Models (matches backend UserStatsResponse)
+// ============================================================================
 @Serializable
 data class UserStatsResponse(
     val userId: String,
     val totalSessions: Int,
-    val avgAccuracy: Double,
-    val avgRtMs: Double,
-    val avgSac: Double,
-    val lastPlayed: String?,
-    val trend: String? // "improving", "stable", "declining"
+    val avgSAC: Double,
+    val avgIES: Double,
+    val currentRiskLevel: String,
+    val recentRiskScore: Double,
+    val lastSessionDate: String
 )
 
-// History Models
+// ============================================================================
+// History Models (matches backend SessionHistoryResponse)
+// ============================================================================
 @Serializable
 data class SessionHistoryResponse(
-    val sessions: List<SessionSummary>
-)
-
-@Serializable
-data class SessionSummary(
-    val sessionId: String,
-    val playedAt: String,
-    val accuracy: Double,
-    val avgRtMs: Double,
-    val sac: Double,
-    val totalTrials: Int
-)
-
-// Motor Baseline Response
-@Serializable
-data class MotorBaselineResponse(
     val userId: String,
-    val motorBaselineMs: Double,
-    val calibratedAt: String?
+    val totalSessions: Int,
+    val sessions: List<SessionHistoryItem>
+)
+
+@Serializable
+data class SessionHistoryItem(
+    val sessionId: String,
+    val timestamp: String,
+    val gameType: String,
+    val level: Int,
+    val sac: Double,
+    val ies: Double,
+    val riskLevel: String,
+    val riskScore: Double
 )
