@@ -8,13 +8,12 @@ class GameRepository(private val gameApi: GameApi) {
 
     suspend fun submitCalibration(
         userId: String,
-        tapReactionTimes: List<Int>
+        tapTimes: List<Double>  // Changed to Double to match backend
     ): Result<CalibrationResponse> = withContext(Dispatchers.Default) {
         try {
             val request = CalibrationRequest(
                 userId = userId,
-                device = DeviceInfo(type = "android", screenHz = 60),
-                tapReactionTimesMs = tapReactionTimes
+                tapTimes = tapTimes  // Removed device info, backend doesn't need it
             )
             gameApi.submitCalibration(request)
         } catch (e: Exception) {
@@ -33,16 +32,17 @@ class GameRepository(private val gameApi: GameApi) {
 
     suspend fun submitGameSession(
         userId: String,
-        startedAt: String,
-        durationMs: Long,
+        sessionId: String,
+        gameType: String,
+        level: Int,
         trials: List<TrialData>
     ): Result<GameSessionResponse> = withContext(Dispatchers.Default) {
         try {
             val request = GameSessionRequest(
                 userId = userId,
-                gameType = "grid_tap_3x3",
-                startedAt = startedAt,
-                durationMs = durationMs,
+                sessionId = sessionId,
+                gameType = gameType,
+                level = level,
                 trials = trials
             )
             gameApi.submitSession(request)

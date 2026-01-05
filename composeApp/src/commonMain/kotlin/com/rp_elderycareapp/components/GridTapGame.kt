@@ -4,6 +4,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,7 +20,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -72,13 +76,11 @@ fun GridTapGame(
             if (showTarget) {
                 // Timeout - record miss
                 val trial = TrialData(
-                    trial = currentTrial,
-                    targetIndex = targetIndex,
-                    shownAtMs = targetShownTime - gameStartTime,
-                    tapIndex = null,
-                    tapAtMs = null,
-                    rtRawMs = null,
-                    result = "miss"
+                    trialNumber = currentTrial,
+                    targetPosition = targetIndex,
+                    reactionTime = 2.5,  // Max timeout in seconds
+                    correct = false,
+                    timestamp = Clock.System.now().toEpochMilliseconds()
                 )
                 onTrialComplete(trial)
                 showTarget = false
@@ -100,17 +102,16 @@ fun GridTapGame(
     fun handleBoxTap(tappedIndex: Int) {
         if (showTarget && !isProcessing) {
             val tapTime = Clock.System.now().toEpochMilliseconds()
-            val reactionTime = (tapTime - targetShownTime).toInt()
+            val reactionTimeMs = (tapTime - targetShownTime)
+            val reactionTimeSec = reactionTimeMs / 1000.0  // Convert to seconds
             val isCorrect = tappedIndex == targetIndex
 
             val trial = TrialData(
-                trial = currentTrial,
-                targetIndex = targetIndex,
-                shownAtMs = targetShownTime - gameStartTime,
-                tapIndex = tappedIndex,
-                tapAtMs = tapTime - gameStartTime,
-                rtRawMs = reactionTime,
-                result = if (isCorrect) "hit" else "wrong"
+                trialNumber = currentTrial,
+                targetPosition = targetIndex,
+                reactionTime = reactionTimeSec,
+                correct = isCorrect,
+                timestamp = tapTime
             )
 
             onTrialComplete(trial)
@@ -148,76 +149,106 @@ fun GridTapGame(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFFF0F9FF),
+                        Color(0xFFE0F2FE)
+                    )
+                )
+            )
             .padding(16.dp)
     ) {
-        // Header with stats
+        // Modern Header with stats - glassmorphism card
         Card(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(
+                    elevation = 16.dp,
+                    shape = RoundedCornerShape(24.dp),
+                    ambientColor = Color(0xFF0EA5E9).copy(alpha = 0.3f)
+                ),
+            shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
+                containerColor = Color.White.copy(alpha = 0.95f)
             ),
-            elevation = CardDefaults.cardElevation(4.dp)
+            elevation = CardDefaults.cardElevation(0.dp)
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(20.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Trial counter
+                // Trial counter with gradient
                 Column {
                     Text(
                         text = "Trial",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = Color(0xFF64748B),
+                        fontWeight = FontWeight.Medium
                     )
                     Text(
                         text = "$currentTrial/$totalTrials",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color(0xFF0EA5E9)
                     )
                 }
 
-                // Score
+                // Score with animation
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = "Score",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = Color(0xFF64748B),
+                        fontWeight = FontWeight.Medium
                     )
                     Text(
                         text = "$score",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.tertiary
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color(0xFF10B981)
                     )
                 }
 
-                // Streak
+                // Streak with animated star
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
+                    val infiniteTransition = rememberInfiniteTransition()
+                    val starRotation by infiniteTransition.animateFloat(
+                        initialValue = if (streak > 0) -10f else 0f,
+                        targetValue = if (streak > 0) 10f else 0f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(500),
+                            repeatMode = RepeatMode.Reverse
+                        )
+                    )
                     Icon(
                         imageVector = Icons.Default.Star,
                         contentDescription = null,
-                        tint = if (streak > 0) Color(0xFFFFD700) else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
+                        tint = if (streak > 0) Color(0xFFFFD700) else Color(0xFFCBD5E1),
+                        modifier = Modifier
+                            .size(28.dp)
+                            .graphicsLayer {
+                                rotationZ = if (streak > 0) starRotation else 0f
+                            }
                     )
                     Column {
                         Text(
                             text = "Streak",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                            color = Color(0xFF64748B),
+                            fontWeight = FontWeight.Medium
                         )
                         Text(
                             text = "$streak",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = if (streak > 0) Color(0xFFFFD700) else MaterialTheme.colorScheme.onSurfaceVariant
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = if (streak > 0) Color(0xFFFFD700) else Color(0xFF94A3B8)
                         )
                     }
                 }
@@ -226,7 +257,7 @@ fun GridTapGame(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Countdown overlay
+        // Countdown overlay with modern animation
         if (!gameStarted) {
             Box(
                 modifier = Modifier
@@ -234,12 +265,25 @@ fun GridTapGame(
                     .weight(1f),
                 contentAlignment = Alignment.Center
             ) {
+                val infiniteTransition = rememberInfiniteTransition()
+                val scale by infiniteTransition.animateFloat(
+                    initialValue = 0.9f,
+                    targetValue = 1.1f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(500),
+                        repeatMode = RepeatMode.Reverse
+                    )
+                )
                 Text(
                     text = if (countdown > 0) "$countdown" else "GO!",
                     style = MaterialTheme.typography.displayLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontSize = 120.sp
+                    fontWeight = FontWeight.Black,
+                    color = Color(0xFF0EA5E9),
+                    fontSize = 120.sp,
+                    modifier = Modifier.graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
+                    }
                 )
             }
         } else {
@@ -267,23 +311,37 @@ fun GridTapGame(
                                     .weight(1f)
                                     .fillMaxHeight()
                                     .shadow(
-                                        elevation = if (isTarget) 12.dp else 4.dp,
-                                        shape = RoundedCornerShape(16.dp)
+                                        elevation = if (isTarget) 20.dp else 8.dp,
+                                        shape = RoundedCornerShape(20.dp),
+                                        ambientColor = if (isTarget) 
+                                            Color(0xFF0EA5E9).copy(alpha = 0.6f) 
+                                        else 
+                                            Color.Black.copy(alpha = 0.1f)
                                     )
-                                    .clip(RoundedCornerShape(16.dp))
+                                    .clip(RoundedCornerShape(20.dp))
                                     .background(
                                         if (isTarget)
-                                            MaterialTheme.colorScheme.primary
+                                            Brush.radialGradient(
+                                                colors = listOf(
+                                                    Color(0xFF0EA5E9),
+                                                    Color(0xFF0284C7)
+                                                )
+                                            )
                                         else
-                                            MaterialTheme.colorScheme.surface
+                                            Brush.linearGradient(
+                                                colors = listOf(
+                                                    Color.White,
+                                                    Color(0xFFF8FAFC)
+                                                )
+                                            )
                                     )
                                     .border(
-                                        width = if (isTarget) 4.dp else 2.dp,
+                                        width = if (isTarget) 4.dp else 3.dp,
                                         color = if (isTarget)
                                             Color.White
                                         else
-                                            MaterialTheme.colorScheme.outline,
-                                        shape = RoundedCornerShape(16.dp)
+                                            Color(0xFFE2E8F0),
+                                        shape = RoundedCornerShape(20.dp)
                                     )
                                     .clickable(
                                         indication = null,
@@ -293,16 +351,36 @@ fun GridTapGame(
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
+                                // Pulsing glow for target
+                                if (isTarget) {
+                                    val infiniteTransition = rememberInfiniteTransition()
+                                    val glowAlpha by infiniteTransition.animateFloat(
+                                        initialValue = 0.3f,
+                                        targetValue = 0.7f,
+                                        animationSpec = infiniteRepeatable(
+                                            animation = tween(600),
+                                            repeatMode = RepeatMode.Reverse
+                                        )
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(
+                                                Color.White.copy(alpha = glowAlpha)
+                                            )
+                                    )
+                                }
+                                
                                 androidx.compose.animation.AnimatedVisibility(
                                     visible = isTarget,
-                                    enter = fadeIn(animationSpec = tween(100)),
-                                    exit = fadeOut(animationSpec = tween(100))
+                                    enter = fadeIn(animationSpec = tween(100)) + scaleIn(initialScale = 0.3f),
+                                    exit = fadeOut(animationSpec = tween(100)) + scaleOut(targetScale = 0.3f)
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Star,
                                         contentDescription = null,
                                         tint = Color.White,
-                                        modifier = Modifier.size(48.dp)
+                                        modifier = Modifier.size(56.dp)
                                     )
                                 }
                             }
@@ -313,14 +391,25 @@ fun GridTapGame(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Instructions
-            Text(
-                text = "Tap the highlighted box as quickly as you can!",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            // Modern Instructions with gradient text effect
+            Card(
                 modifier = Modifier.fillMaxWidth(),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-            )
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White.copy(alpha = 0.8f)
+                )
+            ) {
+                Text(
+                    text = "Tap the highlighted box as quickly as you can!",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF475569),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            }
         }
     }
 }
