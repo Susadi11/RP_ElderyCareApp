@@ -87,9 +87,13 @@ fun GameScreen(
                 is GameState.Ready -> {
                     GameReadyScreen(
                         stats = uiState.stats,
+                        motorBaseline = uiState.motorBaseline,
                         onStartGame = {
                             gameStartTime = Clock.System.now().toEpochMilliseconds()
                             viewModel.startGame()
+                        },
+                        onRecalibrate = {
+                            viewModel.forceRecalibration()
                         }
                     )
                 }
@@ -166,7 +170,9 @@ fun LoadingScreen(message: String) {
 @Composable
 fun GameReadyScreen(
     stats: com.rp_elderycareapp.api.UserStatsResponse?,
-    onStartGame: () -> Unit
+    motorBaseline: Double?,
+    onStartGame: () -> Unit,
+    onRecalibrate: () -> Unit
 ) {
     val infiniteTransition = rememberInfiniteTransition()
     val pulseScale by infiniteTransition.animateFloat(
@@ -384,6 +390,39 @@ fun GameReadyScreen(
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Recalibration button (subtle)
+        motorBaseline?.let {
+            OutlinedButton(
+                onClick = onRecalibrate,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(36.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = Color(0xFF64748B)
+                ),
+                border = BorderStroke(1.dp, Color(0xFFE2E8F0))
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                ) {
+                    Text(
+                        "⚙️ Recalibrate",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "(Current: ${(it * 1000).toInt()} ms)",
+                        fontSize = 14.sp,
+                        color = Color(0xFF94A3B8)
                     )
                 }
             }
@@ -678,10 +717,10 @@ fun ResultsScreen(
                 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                ModernMetricRow("⚡ Response Time", "${(response.features.avgReactionTime * 1000).toInt()} ms", Color(0xFF0EA5E9))
+                ModernMetricRow("⚡ Response Time", "${(response.features.rtAdjMedian * 1000).toInt()} ms", Color(0xFF0EA5E9))
                 ModernMetricRow("🎯 Speed-Accuracy", "${(response.features.sac * 1000).toInt() / 1000.0}", Color(0xFF10B981))
                 ModernMetricRow("⚙️ Efficiency (IES)", "${(response.features.ies * 1000).toInt() / 1000.0}", Color(0xFFF59E0B))
-                ModernMetricRow("📈 RT Variability", "${(response.features.rtVariability * 1000).toInt()} ms", Color(0xFF8B5CF6))
+                ModernMetricRow("📈 RT Variability", "${(response.features.variability * 1000).toInt()} ms", Color(0xFF8B5CF6))
                 ModernMetricRow("🔥 Best Streak", "$streak hits", Color(0xFFEF4444))
             }
         }

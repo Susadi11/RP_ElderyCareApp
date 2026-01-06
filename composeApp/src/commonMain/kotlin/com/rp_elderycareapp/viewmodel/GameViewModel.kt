@@ -79,7 +79,7 @@ class GameViewModel(
 
             // Set a timeout - if submission takes too long, proceed anyway
             val timeoutJob = launch {
-                kotlinx.coroutines.delay(3000) // 3 second timeout
+                kotlinx.coroutines.delay(15000) // 15 second timeout (increased to allow for backend processing)
                 if (_uiState.value.isLoading) {
                     // Timeout reached, proceed to game with default baseline
                     _uiState.value = _uiState.value.copy(
@@ -137,7 +137,7 @@ class GameViewModel(
         val newStreak = if (trial.correct) _uiState.value.streak + 1 else 0
 
         _uiState.value = _uiState.value.copy(
-            currentTrial = trial.trialNumber,
+            currentTrial = trial.trialNumber ?: (_uiState.value.currentTrial + 1),
             trials = currentTrials,
             score = newScore,
             streak = newStreak
@@ -193,6 +193,13 @@ class GameViewModel(
             score = 0,
             streak = 0,
             trials = emptyList()
+        )
+    }
+
+    fun forceRecalibration() {
+        _uiState.value = _uiState.value.copy(
+            gameState = GameState.NeedCalibration,
+            motorBaseline = null
         )
     }
 }

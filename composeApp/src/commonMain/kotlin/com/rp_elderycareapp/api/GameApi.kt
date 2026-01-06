@@ -22,9 +22,9 @@ class GameApi {
             })
         }
         install(HttpTimeout) {
-            requestTimeoutMillis = 3000 // 3 seconds timeout
-            connectTimeoutMillis = 2000 // 2 seconds to connect
-            socketTimeoutMillis = 3000  // 3 seconds for socket
+            requestTimeoutMillis = 30000 // 30 seconds timeout (increased for development)
+            connectTimeoutMillis = 10000 // 10 seconds to connect (increased)
+            socketTimeoutMillis = 30000  // 30 seconds for socket
         }
     }
 
@@ -32,13 +32,17 @@ class GameApi {
         request: CalibrationRequest
     ): Result<CalibrationResponse> {
         return try {
+            println("GameApi: Attempting to submit calibration to: $baseUrl/game/calibration")
             val response: CalibrationResponse = httpClient.post("$baseUrl/game/calibration") {
                 contentType(ContentType.Application.Json)
                 setBody(request)
             }.body()
+            println("GameApi: Calibration successful")
             Result.success(response)
         } catch (e: Exception) {
-            println("GameApi: Error submitting calibration: ${e.message}")
+            println("GameApi: Error submitting calibration to $baseUrl/game/calibration")
+            println("GameApi: Error details: ${e.message}")
+            println("GameApi: Error type: ${e::class.simpleName}")
             e.printStackTrace()
             Result.failure(e)
         }
@@ -48,10 +52,14 @@ class GameApi {
         userId: String
     ): Result<MotorBaselineResponse> {
         return try {
+            println("GameApi: Attempting to get motor baseline from: $baseUrl/game/motor-baseline/$userId")
             val response: MotorBaselineResponse = httpClient.get("$baseUrl/game/motor-baseline/$userId").body()
+            println("GameApi: Motor baseline retrieved successfully")
             Result.success(response)
         } catch (e: Exception) {
-            println("GameApi: Error getting motor baseline: ${e.message}")
+            println("GameApi: Error getting motor baseline from $baseUrl/game/motor-baseline/$userId")
+            println("GameApi: Error details: ${e.message}")
+            println("GameApi: Error type: ${e::class.simpleName}")
             e.printStackTrace()
             Result.failure(e)
         }
@@ -61,13 +69,17 @@ class GameApi {
         request: GameSessionRequest
     ): Result<GameSessionResponse> {
         return try {
+            println("GameApi: Attempting to submit session to: $baseUrl/game/session")
             val response: GameSessionResponse = httpClient.post("$baseUrl/game/session") {
                 contentType(ContentType.Application.Json)
                 setBody(request)
             }.body()
+            println("GameApi: Session submitted successfully")
             Result.success(response)
         } catch (e: Exception) {
-            println("GameApi: Error submitting session: ${e.message}")
+            println("GameApi: Error submitting session to $baseUrl/game/session")
+            println("GameApi: Error details: ${e.message}")
+            println("GameApi: Error type: ${e::class.simpleName}")
             e.printStackTrace()
             Result.failure(e)
         }
