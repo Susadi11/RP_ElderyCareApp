@@ -253,6 +253,18 @@ data class WebSocketMessage(
     val data: String   // JSON string of reminder or alert
 )
 
+// Due now response for polling
+@Serializable
+data class DueNowResponse(
+    val status: String,
+    @SerialName("should_trigger_alarm")
+    val shouldTriggerAlarm: Boolean,
+    @SerialName("urgent_count")
+    val urgentCount: Int,
+    @SerialName("urgent_reminders")
+    val urgentReminders: List<Reminder> = emptyList()
+)
+
 // Audio reminder response from voice recording
 @Serializable
 data class AudioReminderResponse(

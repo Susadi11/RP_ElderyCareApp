@@ -1,0 +1,9 @@
+fastapi==0.109.0
+uvicorn==0.27.0
+dateparser==1.2.0
+pydantic==2.5.3
+python-multipart==0.0.6
+
+# Optional: Install these for BERT support (large download ~2GB)
+# transformers==4.36.2
+# torch==2.1.2

@@ -503,8 +503,8 @@ private fun CreateReminderDialog(
     var priority by remember { mutableStateOf("medium") }
     
     // Date and Time for scheduled_time
-    var selectedDate by remember { mutableStateOf("2026-01-05") } // Tomorrow as default
-    var selectedTime by remember { mutableStateOf("08:00") }
+    var selectedDate by remember { mutableStateOf("2026-01-06") } // Today as default
+    var selectedTime by remember { mutableStateOf("13:00") }
     
     // Repeat pattern
     var repeatPattern by remember { mutableStateOf<String?>(null) } // null = one-time
@@ -553,7 +553,7 @@ private fun CreateReminderDialog(
                     // Calendar Date Picker
                     var showDatePicker by remember { mutableStateOf(false) }
                     val datePickerState = rememberDatePickerState(
-                        initialSelectedDateMillis = Clock.System.now().toEpochMilliseconds() + 86400000L // Tomorrow
+                        initialSelectedDateMillis = Clock.System.now().toEpochMilliseconds() // Today
                     )
                     
                     OutlinedCard(
@@ -609,9 +609,17 @@ private fun CreateReminderDialog(
                                 TextButton(onClick = { showDatePicker = false }) {
                                     Text("Cancel")
                                 }
-                            }
+                            },
+                            colors = DatePickerDefaults.colors(
+                                containerColor = Color.White
+                            )
                         ) {
-                            DatePicker(state = datePickerState)
+                            DatePicker(
+                                state = datePickerState,
+                                colors = DatePickerDefaults.colors(
+                                    containerColor = Color.White
+                                )
+                            )
                         }
                     }
                 }

@@ -56,8 +56,18 @@ class ReminderViewModel(private val alarmManager: PlatformAlarmManager? = null) 
     private val _wsConnectionState = MutableStateFlow<String>("Disconnected")
     val wsConnectionState: StateFlow<String> = _wsConnectionState.asStateFlow()
     
-    // Initialize WebSocket connection
+    private var pollingJob: Job? = null
+    
+    // Initialize WebSocket connection AND start polling for due reminders
     fun initWebSocket(userId: String) {
+        // Start WebSocket (for future real-time updates)
+        initWebSocketOnly(userId)
+        
+        // Start polling for due reminders (backup mechanism)
+        startReminderPolling(userId)
+    }
+    
+    private fun initWebSocketOnly(userId: String) {
         webSocketService = ReminderWebSocketService(userId)
         webSocketService?.connect(scope)
         
@@ -302,7 +312,48 @@ class ReminderViewModel(private val alarmManager: PlatformAlarmManager? = null) 
         showCreateDialog = false
     }
     
+    // Start polling for due reminders every 30 seconds
+    private fun startReminderPolling(userId: String) {
+        pollingJob?.cancel()
+        pollingJob = scope.launch {
+            while (isActive) {
+                try {
+                    println("=== 🔍 Polling for due reminders... ===")
+                    val result = apiService.getDueReminders(userId, timeWindowMinutes = 5)
+                    result.onSuccess { response ->
+                        if (response.shouldTriggerAlarm && response.urgentReminders.isNotEmpty()) {
+                            val reminder = response.urgentReminders.first()
+                            println("=== 🚨 DUE REMINDER FOUND: ${reminder.title} ===")
+                            
+                            // Only trigger if not already showing this alarm
+                            if (_activeAlarm.value?.id != reminder.id) {
+                                _activeAlarm.value = reminder
+                                
+                                // Trigger platform-specific alarm (music, vibration, notification)
+                                alarmManager?.triggerAlarm(reminder)
+                                
+                                // Auto-show alarm dialog
+                                selectedReminder = reminder
+                                showResponseDialog = true
+                            }
+                        } else {
+                            println("=== ✓ No urgent reminders at this time ===")
+                        }
+                    }.onFailure { error ->
+                        println("=== ⚠️ Polling error: ${error.message} ===")
+                    }
+                } catch (e: Exception) {
+                    println("=== ⚠️ Polling exception: ${e.message} ===")
+                }
+                
+                // Poll every 30 seconds
+                delay(30000)
+            }
+        }
+    }
+    
     fun cleanup() {
+        pollingJob?.cancel()
         alarmManager?.cleanup()
         scope.cancel()
         apiService.close()

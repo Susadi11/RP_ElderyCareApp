@@ -359,6 +359,20 @@ class ReminderApiService {
         }
     }
     
+    // Check for due reminders (polling endpoint)
+    suspend fun getDueReminders(userId: String, timeWindowMinutes: Int = 5): Result<DueNowResponse> {
+        return try {
+            val response: DueNowResponse = client.get("$baseUrl/user/$userId/due-now") {
+                parameter("time_window_minutes", timeWindowMinutes)
+            }.body()
+            Result.success(response)
+        } catch (e: Exception) {
+            println("Get due reminders error: ${e.message}")
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+    
     fun close() {
         client.close()
     }
