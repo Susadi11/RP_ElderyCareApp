@@ -18,5 +18,7 @@ object ApiConfig {
         const val CHAT_VOICE = "/chat/voice"
         const val CHAT_SESSIONS = "/chat/sessions"
         const val CHAT_HEALTH = "/chat/health"
+
+        const val REMINDERS = "/api/reminders"
     }
 }

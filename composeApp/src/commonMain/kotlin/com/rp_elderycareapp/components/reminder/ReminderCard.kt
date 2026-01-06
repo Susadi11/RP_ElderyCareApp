@@ -47,18 +47,43 @@ fun ReminderCard(
     val scheduledTime = try {
         Instant.parse(reminder.scheduledTime)
     } catch (e: Exception) {
+        println("❌ Failed to parse scheduled time: ${reminder.scheduledTime}")
+        e.printStackTrace()
         Clock.System.now()
     }
     val now = Clock.System.now()
     val diffMillis = (scheduledTime - now).inWholeMinutes
     
+    // Debug logging
+    println("⏰ Reminder: ${reminder.title}")
+    println("   Scheduled: ${reminder.scheduledTime}")
+    println("   Now: ${now}")
+    println("   Diff (minutes): $diffMillis")
+    
+    // Format the scheduled date/time for display
+    val localDateTime = scheduledTime.toLocalDateTime(TimeZone.currentSystemDefault())
+    val nowDateTime = now.toLocalDateTime(TimeZone.currentSystemDefault())
+    
+    val dateTimeText = "${localDateTime.monthNumber.toString().padStart(2, '0')}-${localDateTime.dayOfMonth.toString().padStart(2, '0')} " +
+            "${localDateTime.hour.toString().padStart(2, '0')}:${localDateTime.minute.toString().padStart(2, '0')}"
+    
+    // Check if it's today
+    val isToday = localDateTime.date == nowDateTime.date
+    val isTomorrow = localDateTime.date.dayOfYear == nowDateTime.date.dayOfYear + 1 && 
+                     localDateTime.year == nowDateTime.year
+    
     val countdownText = when {
-        diffMillis < 0 -> "Overdue"
+        diffMillis < -60 -> "Overdue: $dateTimeText"
+        diffMillis < 0 -> "Overdue (${-diffMillis} min ago)"
         diffMillis == 0L -> "Now!"
+        diffMillis <= 1 -> "In 1 minute"
         diffMillis < 60 -> "In $diffMillis minutes"
-        diffMillis < 1440 -> "In ${diffMillis / 60} hours"
-        else -> "In ${diffMillis / 1440} days"
+        isToday -> "Today at ${localDateTime.hour.toString().padStart(2, '0')}:${localDateTime.minute.toString().padStart(2, '0')}"
+        isTomorrow -> "Tomorrow at ${localDateTime.hour.toString().padStart(2, '0')}:${localDateTime.minute.toString().padStart(2, '0')}"
+        else -> dateTimeText
     }
+    
+    println("   Display: $countdownText")
     
     Card(
         modifier = modifier

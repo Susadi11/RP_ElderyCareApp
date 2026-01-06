@@ -27,6 +27,10 @@ import com.rp_elderycareapp.viewmodel.ReminderUiState
 import com.rp_elderycareapp.services.rememberPlatformAlarmManager
 import com.rp_elderycareapp.services.rememberAudioRecorder
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -280,6 +284,7 @@ private fun ReminderOptionsDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = Color.White,
         title = {
             Text(
                 "Add New Reminder",
@@ -305,7 +310,7 @@ private fun ReminderOptionsDialog(
                         .height(80.dp),
                     onClick = onVoiceRecording,
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                        containerColor = Color.White
                     )
                 ) {
                     Row(
@@ -343,7 +348,7 @@ private fun ReminderOptionsDialog(
                         .height(80.dp),
                     onClick = onManualCreate,
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                        containerColor = Color.White
                     )
                 ) {
                     Row(
@@ -548,7 +553,7 @@ private fun CreateReminderDialog(
                     // Calendar Date Picker
                     var showDatePicker by remember { mutableStateOf(false) }
                     val datePickerState = rememberDatePickerState(
-                        initialSelectedDateMillis = System.currentTimeMillis() + 86400000L // Tomorrow
+                        initialSelectedDateMillis = Clock.System.now().toEpochMilliseconds() + 86400000L // Tomorrow
                     )
                     
                     OutlinedCard(
@@ -590,10 +595,9 @@ private fun CreateReminderDialog(
                                 TextButton(
                                     onClick = {
                                         datePickerState.selectedDateMillis?.let { millis ->
-                                            val date = java.time.Instant.ofEpochMilli(millis)
-                                                .atZone(java.time.ZoneId.systemDefault())
-                                                .toLocalDate()
-                                            selectedDate = date.toString()
+                                            val instant = Instant.fromEpochMilliseconds(millis)
+                                            val dateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
+                                            selectedDate = "${dateTime.year}-${dateTime.monthNumber.toString().padStart(2, '0')}-${dateTime.dayOfMonth.toString().padStart(2, '0')}"
                                         }
                                         showDatePicker = false
                                     }

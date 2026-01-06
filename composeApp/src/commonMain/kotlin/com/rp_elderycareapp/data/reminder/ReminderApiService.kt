@@ -10,6 +10,8 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 
+
+
 class ReminderApiService {
     
     // Using base URL from Constants.kt - automatically configured for emulator/physical device
@@ -33,12 +35,32 @@ class ReminderApiService {
                 setBody(request)
             }
             println("Response status: ${response.status}")
-            val apiResponse: ApiResponse<Reminder> = response.body()
-            println("API Response: status=${apiResponse.status}, data=${apiResponse.data}, error=${apiResponse.error}")
-            if (apiResponse.data != null) {
-                Result.success(apiResponse.data)
-            } else {
-                Result.failure(Exception(apiResponse.error ?: "No data returned from server"))
+            
+            // Check HTTP status first
+            if (response.status.value !in 200..299) {
+                val errorBody = try { response.body<String>() } catch (e: Exception) { "Unknown error" }
+                println("HTTP Error ${response.status.value}: $errorBody")
+                return Result.failure(Exception("Server error: ${response.status.value} - $errorBody"))
+            }
+            
+            try {
+                val apiResponse: ApiResponse<Reminder> = response.body()
+                println("API Response: status=${apiResponse.status}, data=${apiResponse.data}, error=${apiResponse.error}")
+                if (apiResponse.data != null) {
+                    Result.success(apiResponse.data)
+                } else {
+                    Result.failure(Exception(apiResponse.error ?: "No data returned from server"))
+                }
+            } catch (parseError: Exception) {
+                // Try parsing as direct Reminder object (in case backend doesn't wrap it)
+                println("Failed to parse as ApiResponse, trying direct Reminder: ${parseError.message}")
+                try {
+                    val reminder: Reminder = response.body()
+                    Result.success(reminder)
+                } catch (e: Exception) {
+                    println("Failed to parse as Reminder too: ${e.message}")
+                    Result.failure(Exception("Failed to parse server response: ${e.message}"))
+                }
             }
         } catch (e: Exception) {
             println("Create reminder error: ${e.message}")
