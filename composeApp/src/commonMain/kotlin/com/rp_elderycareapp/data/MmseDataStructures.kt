@@ -12,7 +12,8 @@ data class MmseQuestion(
     val category: String,
     val maxPoints: Int = 1,
     val instructions: String = "",
-    val timeLimit: Int = 10 // seconds
+    val timeLimit: Int = 10, // seconds
+    val requiresCaregiverEvaluation: Boolean = false
 )
 
 // Complete MMSE Test Questions (Total: 30 points)
@@ -33,7 +34,8 @@ object MmseQuestions {
             category = "Orientation - Time",
             maxPoints = 1,
             instructions = "Accept either last week of old season or first week of new season",
-            timeLimit = 10
+            timeLimit = 10,
+            requiresCaregiverEvaluation = true
         ),
         MmseQuestion(
             id = 3,
@@ -67,7 +69,8 @@ object MmseQuestions {
             category = "Orientation - Place",
             maxPoints = 1,
             instructions = "Accept exact answer only",
-            timeLimit = 10
+            timeLimit = 10,
+            requiresCaregiverEvaluation = true
         ),
         MmseQuestion(
             id = 7,
@@ -75,7 +78,8 @@ object MmseQuestions {
             category = "Orientation - Place",
             maxPoints = 1,
             instructions = "Accept exact answer only",
-            timeLimit = 10
+            timeLimit = 10,
+            requiresCaregiverEvaluation = true
         ),
         MmseQuestion(
             id = 8,
@@ -83,7 +87,8 @@ object MmseQuestions {
             category = "Orientation - Place",
             maxPoints = 1,
             instructions = "Accept exact answer only",
-            timeLimit = 10
+            timeLimit = 10,
+            requiresCaregiverEvaluation = true
         ),
         MmseQuestion(
             id = 9,
@@ -91,7 +96,8 @@ object MmseQuestions {
             category = "Orientation - Place",
             maxPoints = 1,
             instructions = "In home: street address. In facility: building name",
-            timeLimit = 10
+            timeLimit = 10,
+            requiresCaregiverEvaluation = true
         ),
         MmseQuestion(
             id = 10,
@@ -99,7 +105,8 @@ object MmseQuestions {
             category = "Orientation - Place",
             maxPoints = 1,
             instructions = "In home: what room. In facility: what floor",
-            timeLimit = 10
+            timeLimit = 10,
+            requiresCaregiverEvaluation = true
         ),
 
         // REGISTRATION (3 points total)
@@ -167,7 +174,8 @@ object MmseQuestions {
             category = "Reading",
             maxPoints = 1,
             instructions = "Score 1 only if subject closes eyes. Does not need to read aloud.",
-            timeLimit = 10
+            timeLimit = 10,
+            requiresCaregiverEvaluation = true
         ),
 
         // WRITING (1 point total)
@@ -177,7 +185,8 @@ object MmseQuestions {
             category = "Writing",
             maxPoints = 1,
             instructions = "Sentence must make sense. Ignore spelling errors.",
-            timeLimit = 30
+            timeLimit = 30,
+            requiresCaregiverEvaluation = true
         ),
 
         // DRAWING (1 point total)
@@ -187,7 +196,8 @@ object MmseQuestions {
             category = "Drawing",
             maxPoints = 1,
             instructions = "Must draw a four-sided figure between two five-sided figures",
-            timeLimit = 60
+            timeLimit = 60,
+            requiresCaregiverEvaluation = true
         ),
 
         // THREE-STAGE COMMAND (3 points total)
@@ -197,7 +207,8 @@ object MmseQuestions {
             category = "Command",
             maxPoints = 3,
             instructions = "Score 1 for each: takes paper correctly, folds in half, puts on floor",
-            timeLimit = 30
+            timeLimit = 30,
+            requiresCaregiverEvaluation = true
         )
     )
 }
