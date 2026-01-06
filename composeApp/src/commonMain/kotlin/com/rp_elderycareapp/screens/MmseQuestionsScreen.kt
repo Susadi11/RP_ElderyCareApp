@@ -42,7 +42,7 @@ enum class RecordingState {
 @Composable
 fun MmseQuestionsScreen(
     onNavigateBack: () -> Unit = {},
-    onTalkWithUs: () -> Unit = {},
+//    onTalkWithUs: () -> Unit = {},
     onComplete: (totalScore: Int) -> Unit = {}
 ) {
     val questions = remember { MmseQuestions.allQuestions }
@@ -99,14 +99,14 @@ fun MmseQuestionsScreen(
                 )
             ),
         containerColor = Color.Transparent,
-        topBar = {
-            TopAppBar(
-                title = { },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
-                )
-            )
-        }
+//        topBar = {
+//            TopAppBar(
+//                title = { },
+//                colors = TopAppBarDefaults.topAppBarColors(
+//                    containerColor = Color.Transparent
+//                )
+//            )
+//        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -185,9 +185,9 @@ fun MmseQuestionsScreen(
                 onClick = playQuestionAudio
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+//            Spacer(modifier = Modifier.height(24.dp))
 
-            TalkWithUsButton(onClick = onTalkWithUs)
+//            TalkWithUsButton(onClick = onTalkWithUs)
 
             Spacer(modifier = Modifier.height(20.dp))
         }
@@ -581,40 +581,40 @@ private fun RepeatQuestionButton(onClick: () -> Unit) {
     }
 }
 
-@Composable
-private fun TalkWithUsButton(onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .shadow(
-                elevation = 6.dp,
-                shape = RoundedCornerShape(28.dp)
-            ),
-        shape = RoundedCornerShape(28.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFF1A1A2E)
-        )
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(
-                imageVector = Icons.Default.SupportAgent,
-                contentDescription = "Support",
-                tint = Color(0xFF4ECCA3),
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                text = "Talk with Us",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
-        }
-    }
-}
+//@Composable
+//private fun TalkWithUsButton(onClick: () -> Unit) {
+//    Button(
+//        onClick = onClick,
+//        modifier = Modifier
+//            .fillMaxWidth()
+//            .height(56.dp)
+//            .shadow(
+//                elevation = 6.dp,
+//                shape = RoundedCornerShape(28.dp)
+//            ),
+//        shape = RoundedCornerShape(28.dp),
+//        colors = ButtonDefaults.buttonColors(
+//            containerColor = Color(0xFF1A1A2E)
+//        )
+//    ) {
+//        Row(
+//            horizontalArrangement = Arrangement.Center,
+//            verticalAlignment = Alignment.CenterVertically,
+//            modifier = Modifier.fillMaxWidth()
+//        ) {
+//            Icon(
+//                imageVector = Icons.Default.SupportAgent,
+//                contentDescription = "Support",
+//                tint = Color(0xFF4ECCA3),
+//                modifier = Modifier.size(24.dp)
+//            )
+//            Spacer(modifier = Modifier.width(12.dp))
+//            Text(
+//                text = "Talk with Us",
+//                fontSize = 16.sp,
+//                fontWeight = FontWeight.Bold,
+//                color = Color.White
+//            )
+//        }
+//    }
+//}

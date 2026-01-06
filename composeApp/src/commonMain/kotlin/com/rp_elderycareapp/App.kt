@@ -125,9 +125,9 @@ fun App() {
                         onNavigateBack = {
                             navController.popBackStack()
                         },
-                        onTalkWithUs = {
-                            navController.navigate(NavRoutes.CHAT.route)
-                        }
+//                        onTalkWithUs = {
+//                            navController.navigate(NavRoutes.CHAT.route)
+//                        }
                     )
                 }
 
