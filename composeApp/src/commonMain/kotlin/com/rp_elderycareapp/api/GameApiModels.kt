@@ -45,19 +45,38 @@ data class GameSessionRequest(
 
 @Serializable
 data class TrialData(
-    val trialNumber: Int,
-    val targetPosition: Int,
-    val reactionTime: Double,
-    val correct: Boolean,
-    val timestamp: Long
-)
+    val trialNumber: Int? = null,      // Optional - backend doesn't require
+    val targetPosition: Int? = null,   // Optional - backend doesn't require
+    val rt_raw: Double,                // Backend expects rt_raw (reaction time in seconds)
+    val correct: Boolean,              // Required by backend (0 or 1, but Boolean works)
+    val timestamp: Long? = null,       // Optional - backend doesn't require
+    val hint_used: Int? = null         // Optional - backend field for hints
+) {
+    // Backward compatibility constructor
+    constructor(
+        trialNumber: Int,
+        targetPosition: Int,
+        reactionTime: Double,
+        correct: Boolean,
+        timestamp: Long
+    ) : this(
+        trialNumber = trialNumber,
+        targetPosition = targetPosition,
+        rt_raw = reactionTime,  // Map reactionTime to rt_raw
+        correct = correct,
+        timestamp = timestamp,
+        hint_used = 0
+    )
+}
 
 @Serializable
 data class SessionSummary(
-    val totalTrials: Int,
-    val correctTrials: Int,
-    val avgReactionTime: Double,
-    val duration: Long
+    val totalAttempts: Int,      // Backend expects totalAttempts
+    val correct: Int,            // Backend expects correct (not correctTrials)
+    val meanRtRaw: Double,       // Backend expects meanRtRaw (mean reaction time in seconds)
+    val errors: Int? = null,     // Optional - backend computes this
+    val hintsUsed: Int? = null,  // Optional - backend field
+    val medianRtRaw: Double? = null  // Optional - backend uses this
 )
 
 @Serializable
@@ -74,15 +93,16 @@ data class SessionFeatures(
     val sac: Double,
     val ies: Double,
     val accuracy: Double,
-    val avgReactionTime: Double,
-    val rtVariability: Double
+    val rtAdjMedian: Double,  // Backend uses rtAdjMedian (reaction time adjusted for motor baseline)
+    val variability: Double   // Backend uses variability
 )
 
 @Serializable
 data class RiskPrediction(
     val riskLevel: String,  // "LOW", "MEDIUM", "HIGH"
     val riskScore0_100: Double,
-    val probabilities: Map<String, Double>? = null
+    val riskProbability: Map<String, Double>,  // Backend uses riskProbability (not probabilities)
+    val lstmDeclineScore: Double  // Backend includes LSTM decline score
 )
 
 // ============================================================================
