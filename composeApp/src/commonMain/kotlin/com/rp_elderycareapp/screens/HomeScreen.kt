@@ -23,6 +23,7 @@ import com.rp_elderycareapp.ui.theme.ThemeConfig
 @Composable
 fun HomeScreen(
     userName: String = "User",
+    authViewModel: com.rp_elderycareapp.viewmodel.AuthViewModel? = null,
     onStartChat: () -> Unit = {},
     onPlayGames: () -> Unit = {},
     onTakeMmseTest: () -> Unit = {},

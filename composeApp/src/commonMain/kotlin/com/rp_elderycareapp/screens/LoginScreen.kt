@@ -1,5 +1,6 @@
 package com.rp_elderycareapp.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -10,10 +11,14 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import com.rp_elderycareapp.viewmodel.AuthViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.Canvas
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -25,6 +30,9 @@ import androidx.compose.ui.unit.sp
 import com.rp_elderycareapp.ui.theme.AppColors
 
 @Composable
+expect fun AppLogo(modifier: Modifier)
+
+@Composable
 expect fun LoginVisibilityIcon(isVisible: Boolean)
 
 @Composable
@@ -34,7 +42,11 @@ expect fun LoginEmailIcon()
 expect fun LoginLockIcon()
 
 @Composable
+expect fun GoogleSignInButton(onIdTokenReceived: (String) -> Unit, isLoading: Boolean)
+
+@Composable
 fun LoginScreen(
+    authViewModel: AuthViewModel,
     onLoginSuccess: () -> Unit = {},
     onNavigateToSignup: () -> Unit = {},
     onForgotPassword: () -> Unit = {}
@@ -42,8 +54,19 @@ fun LoginScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+    
+    // Observe ViewModel state
+    val isLoading = authViewModel.isLoading.value
+    val errorMessage = authViewModel.errorMessage.value
+    val successMessage = authViewModel.successMessage.value
+    
+    // Navigate on successful login
+    LaunchedEffect(authViewModel.isAuthenticated.value) {
+        if (authViewModel.isAuthenticated.value) {
+            onLoginSuccess()
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -67,11 +90,11 @@ fun LoginScreen(
         ) {
             Spacer(modifier = Modifier.height(40.dp))
 
-            // App Logo/Title
-            Text(
-                text = "👋",
-                fontSize = 80.sp,
-                modifier = Modifier.padding(bottom = 16.dp)
+            // App Logo
+            AppLogo(
+                modifier = Modifier
+                    .size(180.dp)
+                    .padding(bottom = 16.dp)
             )
 
             Text(
@@ -98,7 +121,7 @@ fun LoginScreen(
                 value = email,
                 onValueChange = {
                     email = it
-                    errorMessage = null
+                    authViewModel.clearError()
                 },
                 label = { Text("Email") },
                 placeholder = { Text("Enter your email") },
@@ -127,7 +150,7 @@ fun LoginScreen(
                 value = password,
                 onValueChange = {
                     password = it
-                    errorMessage = null
+                    authViewModel.clearError()
                 },
                 label = { Text("Password") },
                 placeholder = { Text("Enter your password") },
@@ -192,8 +215,14 @@ fun LoginScreen(
             // Login button
             Button(
                 onClick = {
-                    // Navigate to home without validation (for testing)
-                    onLoginSuccess()
+                    if (email.isEmpty() || password.isEmpty()) {
+                        authViewModel.errorMessage.value = "Please enter email and password"
+                        return@Button
+                    }
+                    
+                    scope.launch {
+                        authViewModel.login(email, password)
+                    }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -219,6 +248,41 @@ fun LoginScreen(
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Divider with "or continue with"
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                HorizontalDivider(
+                    modifier = Modifier.weight(1f),
+                    color = AppColors.SecondaryText.copy(alpha = 0.3f)
+                )
+                Text(
+                    text = "or continue with",
+                    fontSize = 14.sp,
+                    color = AppColors.SecondaryText,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+                HorizontalDivider(
+                    modifier = Modifier.weight(1f),
+                    color = AppColors.SecondaryText.copy(alpha = 0.3f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Google Sign-In button
+            GoogleSignInButton(
+                onIdTokenReceived = { idToken ->
+                    scope.launch {
+                        authViewModel.googleSignIn(idToken)
+                    }
+                },
+                isLoading = isLoading
+            )
 
             Spacer(modifier = Modifier.height(24.dp))
 

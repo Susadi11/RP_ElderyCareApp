@@ -14,6 +14,8 @@ object AppColors {
     val SkyBlue = Color(0xFF87CEEB)           // Sky blue
     val Azure = Color(0xFF0EA5E9)             // Azure (matching primary)
     val LightGray = Color(0xFFF1F5F9)         // Light gray shade
+    val LightLavender = Color(0xFFE9D5FF)     // Light lavender for gradients
+    val LightPeach = Color(0xFFFED7D7)        // Light peach for gradients
 
     // Background Colors
     val Background = Color(0xFFFFFFFF)        // White background

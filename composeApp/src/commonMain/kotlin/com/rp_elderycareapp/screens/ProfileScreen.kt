@@ -11,6 +11,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
+import com.rp_elderycareapp.viewmodel.AuthViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,12 +47,23 @@ expect fun getPreferencesManager(): PreferencesManager
 
 @Composable
 fun ProfileScreen(
+    authViewModel: AuthViewModel,
     onNavigateBack: () -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
     val preferencesManager = getPreferencesManager()
     var showBaseUrlDialog by remember { mutableStateOf(false) }
     var baseUrlInput by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
+    
+    // Observe user data
+    val currentUser = authViewModel.currentUser.value
+    val isLoading = authViewModel.isLoading.value
+    
+    // Load profile on first launch
+    LaunchedEffect(Unit) {
+        authViewModel.loadUserProfile()
+    }
 
     Column(
         modifier = Modifier
@@ -92,14 +105,14 @@ fun ProfileScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = "John Doe",
+                        text = currentUser?.full_name ?: "Loading...",
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Bold,
                         color = AppColors.DeepBlue
                     )
 
                     Text(
-                        text = "john.doe@email.com",
+                        text = currentUser?.email ?: "",
                         fontSize = 16.sp,
                         color = Color(0xFF9CA3AF)
                     )
@@ -141,28 +154,32 @@ fun ProfileScreen(
                     Column {
                         ProfileDetailItem(
                             label = "Full Name",
-                            value = "John Doe"
+                            value = currentUser?.full_name ?: "Not set"
                         )
                         ProfileDivider()
                         ProfileDetailItem(
                             label = "Email",
-                            value = "john.doe@email.com"
+                            value = currentUser?.email ?: "Not set"
                         )
                         ProfileDivider()
                         ProfileDetailItem(
                             label = "Phone",
-                            value = "+1 234 567 8900"
+                            value = currentUser?.phone_number?.takeIf { it.isNotEmpty() } ?: "Not set"
                         )
-                        ProfileDivider()
-                        ProfileDetailItem(
-                            label = "Date of Birth",
-                            value = "January 15, 1960"
-                        )
-                        ProfileDivider()
-                        ProfileDetailItem(
-                            label = "Emergency Contact",
-                            value = "+1 234 567 8901"
-                        )
+                        if (currentUser?.age != null) {
+                            ProfileDivider()
+                            ProfileDetailItem(
+                                label = "Age",
+                                value = currentUser.age.toString()
+                            )
+                        }
+                        if (currentUser?.emergency_contact_number?.isNotEmpty() == true) {
+                            ProfileDivider()
+                            ProfileDetailItem(
+                                label = "Emergency Contact",
+                                value = currentUser.emergency_contact_number
+                            )
+                        }
                     }
                 }
             }
@@ -216,7 +233,10 @@ fun ProfileScreen(
             item {
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedButton(
-                    onClick = onLogout,
+                    onClick = {
+                        authViewModel.logout()
+                        onLogout()
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
