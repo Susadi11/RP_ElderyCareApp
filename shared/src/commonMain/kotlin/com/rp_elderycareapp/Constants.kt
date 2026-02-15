@@ -20,5 +20,13 @@ object ApiConfig {
         const val CHAT_HEALTH = "/chat/health"
 
         const val REMINDERS = "/api/reminders"
+        
+        // User Authentication
+        const val USER_REGISTER = "/api/user/register"
+        const val USER_LOGIN = "/api/user/login"
+        const val USER_PROFILE = "/api/user/profile"
+        const val USER_FORGOT_PASSWORD = "/api/user/forgot-password"
+        const val USER_RESET_PASSWORD = "/api/user/reset-password"
+        const val USER_REFRESH_TOKEN = "/api/user/refresh-token"
     }
 }

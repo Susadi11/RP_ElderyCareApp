@@ -10,6 +10,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import com.rp_elderycareapp.viewmodel.AuthViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -41,19 +44,33 @@ expect fun SignupLockIcon()
 
 @Composable
 fun SignupScreen(
+    authViewModel: AuthViewModel,
     onSignupSuccess: () -> Unit = {},
     onNavigateToLogin: () -> Unit = {}
 ) {
     var fullName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
+    var age by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
     var agreedToTerms by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    
+    // Observe ViewModel state
+    val isLoading = authViewModel.isLoading.value
+    val errorMessage = authViewModel.errorMessage.value
+    val successMessage = authViewModel.successMessage.value
+    
+    // Navigate on successful registration
+    LaunchedEffect(successMessage) {
+        if (successMessage != null && successMessage.contains("successful")) {
+            kotlinx.coroutines.delay(1500)  // Show success message briefly
+            onSignupSuccess()
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -77,11 +94,11 @@ fun SignupScreen(
         ) {
             Spacer(modifier = Modifier.height(20.dp))
 
-            // App Logo/Title
-            Text(
-                text = "🌟",
-                fontSize = 80.sp,
-                modifier = Modifier.padding(bottom = 16.dp)
+            // App Logo
+            AppLogo(
+                modifier = Modifier
+                    .size(180.dp)
+                    .padding(bottom = 16.dp)
             )
 
             Text(
@@ -108,7 +125,7 @@ fun SignupScreen(
                 value = fullName,
                 onValueChange = {
                     fullName = it
-                    errorMessage = null
+                    authViewModel.clearError()
                 },
                 label = { Text("Full Name") },
                 placeholder = { Text("Enter your full name") },
@@ -137,7 +154,7 @@ fun SignupScreen(
                 value = email,
                 onValueChange = {
                     email = it
-                    errorMessage = null
+                    authViewModel.clearError()
                 },
                 label = { Text("Email") },
                 placeholder = { Text("Enter your email") },
@@ -166,7 +183,7 @@ fun SignupScreen(
                 value = phone,
                 onValueChange = {
                     phone = it
-                    errorMessage = null
+                    authViewModel.clearError()
                 },
                 label = { Text("Phone Number") },
                 placeholder = { Text("Enter your phone number") },
@@ -190,12 +207,42 @@ fun SignupScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Age field (optional)
+            OutlinedTextField(
+                value = age,
+                onValueChange = {
+                    // Only allow digits
+                    if (it.isEmpty() || it.all { char -> char.isDigit() }) {
+                        age = it
+                    }
+                },
+                label = { Text("Age (Optional)") },
+                placeholder = { Text("Enter your age") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Next
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(64.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AppColors.Primary,
+                    unfocusedBorderColor = AppColors.Primary.copy(alpha = 0.3f),
+                    focusedLabelColor = AppColors.Primary,
+                    cursorColor = AppColors.Primary
+                )
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             // Password field
             OutlinedTextField(
                 value = password,
                 onValueChange = {
                     password = it
-                    errorMessage = null
+                    authViewModel.clearError()
                 },
                 label = { Text("Password") },
                 placeholder = { Text("Create a password") },
@@ -230,7 +277,7 @@ fun SignupScreen(
                 value = confirmPassword,
                 onValueChange = {
                     confirmPassword = it
-                    errorMessage = null
+                    authViewModel.clearError()
                 },
                 label = { Text("Confirm Password") },
                 placeholder = { Text("Re-enter your password") },
@@ -302,18 +349,25 @@ fun SignupScreen(
             Button(
                 onClick = {
                     when {
-                        fullName.isEmpty() -> errorMessage = "Please enter your full name"
-                        email.isEmpty() -> errorMessage = "Please enter your email"
-                        phone.isEmpty() -> errorMessage = "Please enter your phone number"
-                        password.isEmpty() -> errorMessage = "Please create a password"
-                        password.length < 6 -> errorMessage = "Password must be at least 6 characters"
-                        confirmPassword.isEmpty() -> errorMessage = "Please confirm your password"
-                        password != confirmPassword -> errorMessage = "Passwords do not match"
-                        !agreedToTerms -> errorMessage = "Please agree to the Terms & Conditions"
+                        fullName.isEmpty() -> authViewModel.errorMessage.value = "Please enter your full name"
+                        email.isEmpty() -> authViewModel.errorMessage.value = "Please enter your email"
+                        phone.isEmpty() -> authViewModel.errorMessage.value = "Please enter your phone number"
+                        password.isEmpty() -> authViewModel.errorMessage.value = "Please create a password"
+                        password.length < 8 -> authViewModel.errorMessage.value = "Password must be at least 8 characters"
+                        confirmPassword.isEmpty() -> authViewModel.errorMessage.value = "Please confirm your password"
+                        password != confirmPassword -> authViewModel.errorMessage.value = "Passwords do not match"
+                        !agreedToTerms -> authViewModel.errorMessage.value = "Please agree to the Terms & Conditions"
                         else -> {
-                            isLoading = true
-                            // Simulate signup - replace with actual authentication
-                            onSignupSuccess()
+                            scope.launch {
+                                authViewModel.register(
+                                    fullName = fullName,
+                                    email = email,
+                                    phoneNumber = phone,
+                                    age = age.toIntOrNull(),
+                                    password = password,
+                                    confirmPassword = confirmPassword
+                                )
+                            }
                         }
                     }
                 },
