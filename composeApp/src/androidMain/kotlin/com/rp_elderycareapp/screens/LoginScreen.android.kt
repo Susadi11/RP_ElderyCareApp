@@ -28,7 +28,8 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.rp_elderycareapp.ui.theme.AppColors
 import kotlinx.coroutines.launch
 
-private const val GOOGLE_WEB_CLIENT_ID = "717354778892-h5t7l51m79s1b61dmsvmmeqce2i1frr0.apps.googleusercontent.com"
+// Use Web Client ID for server-side verification
+private const val GOOGLE_WEB_CLIENT_ID = "717354778892-cejp1dj272oc05qrjtu6a9bhcfb5lq30.apps.googleusercontent.com"
 
 @Composable
 actual fun LoginVisibilityIcon(isVisible: Boolean) {
@@ -100,12 +101,16 @@ actual fun GoogleSignInButton(onIdTokenReceived: (String) -> Unit, isLoading: Bo
                         onIdTokenReceived(idToken)
                         
                     } catch (e: GetCredentialException) {
-                        Log.e("GoogleSignIn", "GetCredentialException: ${e.message}", e)
+                        Log.e("GoogleSignIn", "GetCredentialException type: ${e.type}", e)
+                        Log.e("GoogleSignIn", "GetCredentialException message: ${e.message}", e)
+                        Log.e("GoogleSignIn", "GetCredentialException errorMessage: ${e.errorMessage}", e)
                         errorMessage = when {
                             e.message?.contains("cancelled", ignoreCase = true) == true -> null // User cancelled
                             e.message?.contains("No credentials available", ignoreCase = true) == true -> 
                                 "No Google account found. Please add a Google account to your device."
-                            else -> "Google Sign-In failed: ${e.message}"
+                            e.type == android.credentials.GetCredentialException.TYPE_NO_CREDENTIAL ->
+                                "No Google account configured. Please sign in to a Google account on this device."
+                            else -> "Google Sign-In failed: ${e.type} - ${e.errorMessage}"
                         }
                     } catch (e: Exception) {
                         Log.e("GoogleSignIn", "Unexpected error: ${e.message}", e)
