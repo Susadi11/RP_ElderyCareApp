@@ -133,7 +133,8 @@ fun App() {
                             onPlayGames = { navController.navigate(NavRoutes.GAME.route) },
                             onTakeMmseTest = { navController.navigate(NavRoutes.MMSE_TEST.route) },
                             onNavigateToProfile = { navController.navigate(NavRoutes.PROFILE.route) },
-                            onNavigateToSettings = { navController.navigate(NavRoutes.SETTINGS.route) }
+                            onNavigateToSettings = { navController.navigate(NavRoutes.SETTINGS.route) },
+                            onNavigateToPatientDetails = { navController.navigate(NavRoutes.PATIENT_DETAILS.route) }
                         )
                     }
                 }
@@ -189,6 +190,12 @@ fun App() {
                 composable(NavRoutes.SETTINGS.route) {
                     // Settings screen takes full height (no bottom padding)
                     SettingsScreen(
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+                composable(NavRoutes.PATIENT_DETAILS.route) {
+                    PatientDetailsScreen(
+                        viewModel = authViewModel,
                         onNavigateBack = { navController.popBackStack() }
                     )
                 }
