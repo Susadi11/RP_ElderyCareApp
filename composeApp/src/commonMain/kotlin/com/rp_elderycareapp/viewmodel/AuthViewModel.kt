@@ -340,4 +340,238 @@ class AuthViewModel(private val preferencesManager: PreferencesManager) {
     fun clearSuccess() {
         successMessage.value = null
     }
+
+    // ===== Caregiver Lookup & Linking =====
+
+    val caregiverLookupResult = mutableStateOf<CaregiverLookupInfo?>(null)
+    val profileCompletion = mutableStateOf<ProfileCompletionData?>(null)
+    val medicalRecordsState = mutableStateOf<MedicalRecords?>(null)
+
+    suspend fun lookupCaregiver(caregiverId: String) {
+        isLoading.value = true
+        errorMessage.value = null
+        caregiverLookupResult.value = null
+
+        try {
+            val result = userApi.lookupCaregiver(caregiverId)
+            result.onSuccess { response ->
+                if (response.success && response.caregiver != null) {
+                    caregiverLookupResult.value = response.caregiver
+                } else {
+                    errorMessage.value = "Caregiver not found"
+                }
+            }.onFailure { e ->
+                errorMessage.value = parseErrorMessage(e)
+            }
+        } catch (e: Exception) {
+            errorMessage.value = parseErrorMessage(e)
+        }
+
+        isLoading.value = false
+    }
+
+    suspend fun linkToCaregiver(caregiverId: String) {
+        isLoading.value = true
+        errorMessage.value = null
+
+        val token = preferencesManager.getAccessToken() ?: run {
+            errorMessage.value = "Not authenticated"
+            isLoading.value = false
+            return
+        }
+
+        try {
+            val result = userApi.linkToCaregiver(token, caregiverId)
+            result.onSuccess { response ->
+                if (response.success) {
+                    successMessage.value = response.message
+                    caregiverLookupResult.value = null
+                    // Refresh profile
+                    withContext(Dispatchers.Default) { loadUserProfile() }
+                } else {
+                    errorMessage.value = "Failed to link caregiver"
+                }
+            }.onFailure { e ->
+                errorMessage.value = parseErrorMessage(e)
+            }
+        } catch (e: Exception) {
+            errorMessage.value = parseErrorMessage(e)
+        }
+
+        isLoading.value = false
+    }
+
+    fun clearCaregiverLookup() {
+        caregiverLookupResult.value = null
+    }
+
+    // ===== Medical Records =====
+
+    suspend fun loadMedicalRecords() {
+        val token = preferencesManager.getAccessToken() ?: return
+
+        try {
+            val result = userApi.getMedicalRecords(token)
+            result.onSuccess { response ->
+                if (response.success && response.records != null) {
+                    medicalRecordsState.value = response.records
+                }
+            }.onFailure { e ->
+                println("Failed to load medical records: ${e.message}")
+            }
+        } catch (e: Exception) {
+            println("Failed to load medical records: ${e.message}")
+        }
+    }
+
+    suspend fun updateMedicalRecords(
+        allergies: List<String>? = null,
+        specialTreatments: List<String>? = null,
+        medicines: List<String>? = null,
+        medicalHistory: String? = null,
+        medicalConditions: List<String>? = null
+    ) {
+        isLoading.value = true
+        errorMessage.value = null
+
+        val token = preferencesManager.getAccessToken() ?: run {
+            errorMessage.value = "Not authenticated"
+            isLoading.value = false
+            return
+        }
+
+        try {
+            val request = MedicalRecordsUpdateRequest(
+                allergies = allergies,
+                special_treatments = specialTreatments,
+                medicines = medicines,
+                medical_history = medicalHistory,
+                medical_conditions = medicalConditions
+            )
+
+            val result = userApi.updateMedicalRecords(token, request)
+            result.onSuccess { response ->
+                if (response.success) {
+                    successMessage.value = "Medical records updated"
+                    loadMedicalRecords()
+                } else {
+                    errorMessage.value = "Failed to update medical records"
+                }
+            }.onFailure { e ->
+                errorMessage.value = parseErrorMessage(e)
+            }
+        } catch (e: Exception) {
+            errorMessage.value = parseErrorMessage(e)
+        }
+
+        isLoading.value = false
+    }
+
+    // ===== Profile Completion =====
+
+    suspend fun loadProfileCompletion() {
+        val token = preferencesManager.getAccessToken() ?: return
+
+        try {
+            val result = userApi.getProfileCompletion(token)
+            result.onSuccess { response ->
+                if (response.success && response.completion != null) {
+                    profileCompletion.value = response.completion
+                }
+            }.onFailure { e ->
+                println("Failed to load profile completion: ${e.message}")
+            }
+        } catch (e: Exception) {
+            println("Failed to load profile completion: ${e.message}")
+        }
+    }
+
+    // ===== Profile Update =====
+
+    suspend fun updateProfile(
+        fullName: String? = null,
+        phoneNumber: String? = null,
+        age: Int? = null,
+        gender: String? = null,
+        address: String? = null,
+        emergencyContactName: String? = null,
+        emergencyContactNumber: String? = null
+    ) {
+        isLoading.value = true
+        errorMessage.value = null
+        successMessage.value = null
+
+        val token = preferencesManager.getAccessToken() ?: run {
+            errorMessage.value = "Not authenticated"
+            isLoading.value = false
+            return
+        }
+
+        try {
+            val request = ProfileUpdateRequest(
+                full_name = fullName,
+                phone_number = phoneNumber,
+                age = age,
+                gender = gender,
+                address = address,
+                emergency_contact_name = emergencyContactName,
+                emergency_contact_number = emergencyContactNumber
+            )
+
+            val result = userApi.updateProfile(token, request)
+            result.onSuccess { response ->
+                if (response.success) {
+                    currentUser.value = response.user
+                    val profileJson = json.encodeToString(response.user)
+                    preferencesManager.saveUserProfile(profileJson)
+                    successMessage.value = "Profile updated successfully"
+                    // Reload completion stats
+                    loadProfileCompletion()
+                } else {
+                    errorMessage.value = "Failed to update profile"
+                }
+            }.onFailure { e ->
+                errorMessage.value = parseErrorMessage(e)
+            }
+        } catch (e: Exception) {
+            errorMessage.value = parseErrorMessage(e)
+        }
+
+        isLoading.value = false
+    }
+
+    // ===== Profile Photo =====
+
+    suspend fun uploadProfilePhoto(photoBase64: String, contentType: String = "image/jpeg") {
+        isLoading.value = true
+        errorMessage.value = null
+
+        val token = preferencesManager.getAccessToken() ?: run {
+            errorMessage.value = "Not authenticated"
+            isLoading.value = false
+            return
+        }
+
+        try {
+            val result = userApi.uploadProfilePhoto(token, photoBase64, contentType)
+            result.onSuccess { response ->
+                if (response.success) {
+                    successMessage.value = "Profile photo updated"
+                    loadUserProfile()
+                } else {
+                    errorMessage.value = "Failed to upload photo"
+                }
+            }.onFailure { e ->
+                errorMessage.value = parseErrorMessage(e)
+            }
+        } catch (e: Exception) {
+            errorMessage.value = parseErrorMessage(e)
+        }
+
+        isLoading.value = false
+    }
+
+    fun getProfilePhotoUrl(userId: String): String {
+        return userApi.getProfilePhotoUrl(userId)
+    }
 }

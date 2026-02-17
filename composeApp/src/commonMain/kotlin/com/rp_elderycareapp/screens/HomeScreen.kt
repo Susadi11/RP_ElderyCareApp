@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -28,7 +30,8 @@ fun HomeScreen(
     onPlayGames: () -> Unit = {},
     onTakeMmseTest: () -> Unit = {},
     onNavigateToProfile: () -> Unit = {},
-    onNavigateToSettings: () -> Unit = {}
+    onNavigateToSettings: () -> Unit = {},
+    onNavigateToPatientDetails: () -> Unit = {}
 ) {
     Box(
         modifier = Modifier
@@ -60,6 +63,19 @@ fun HomeScreen(
                 onPlayGames = onPlayGames,
                 onViewProgress = onTakeMmseTest,
                 onNavigateToSettings = onNavigateToSettings
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // My Health Profile Button - matching QuickActionButton style
+            QuickActionButton(
+                text = "My Health Profile",
+                icon = Icons.Default.Favorite,
+                backgroundColor = AppColors.Primary,
+                onClick = onNavigateToPatientDetails,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = ThemeConfig.Padding.Screen)
             )
 
             // Bottom spacing for safe area

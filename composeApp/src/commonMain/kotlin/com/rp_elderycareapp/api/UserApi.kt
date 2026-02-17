@@ -5,6 +5,7 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
@@ -22,6 +23,14 @@ class UserApi {
         }
     }
 
+    private suspend inline fun <reified T> handleResponse(response: HttpResponse): T {
+        if (!response.status.isSuccess()) {
+            val errorBody = try { response.bodyAsText() } catch (_: Exception) { "" }
+            throw Exception("Server error ${response.status.value}: $errorBody")
+        }
+        return response.body()
+    }
+
     /**
      * Register a new user account
      */
@@ -29,18 +38,17 @@ class UserApi {
         return try {
             val url = "$baseUrl/api/user/register"
             println("UserApi: Registering user at: $url")
-            println("UserApi: Email: ${request.email}, Name: ${request.full_name}")
 
-            val response: RegisterResponse = httpClient.post(url) {
+            val httpResponse = httpClient.post(url) {
                 contentType(ContentType.Application.Json)
                 setBody(request)
-            }.body()
+            }
+            val response: RegisterResponse = handleResponse(httpResponse)
 
             println("UserApi: Registration successful for ${response.user.email}")
             Result.success(response)
         } catch (e: Exception) {
             println("UserApi: Registration failed: ${e::class.simpleName} - ${e.message}")
-            e.printStackTrace()
             Result.failure(e)
         }
     }
@@ -52,19 +60,17 @@ class UserApi {
         return try {
             val url = "$baseUrl/api/user/login"
             println("UserApi: Logging in at: $url")
-            println("UserApi: Email: ${request.email}")
 
-            val response: LoginResponse = httpClient.post(url) {
+            val httpResponse = httpClient.post(url) {
                 contentType(ContentType.Application.Json)
                 setBody(request)
-            }.body()
+            }
+            val response: LoginResponse = handleResponse(httpResponse)
 
             println("UserApi: Login successful for ${response.user.email}")
-            println("UserApi: Access token received: ${response.access_token.take(20)}...")
             Result.success(response)
         } catch (e: Exception) {
             println("UserApi: Login failed: ${e::class.simpleName} - ${e.message}")
-            e.printStackTrace()
             Result.failure(e)
         }
     }
@@ -77,16 +83,16 @@ class UserApi {
             val url = "$baseUrl/api/user/google-login"
             println("UserApi: Google login at: $url")
 
-            val response: LoginResponse = httpClient.post(url) {
+            val httpResponse = httpClient.post(url) {
                 contentType(ContentType.Application.Json)
                 setBody(GoogleLoginRequest(id_token = idToken))
-            }.body()
+            }
+            val response: LoginResponse = handleResponse(httpResponse)
 
             println("UserApi: Google login successful for ${response.user.email}")
             Result.success(response)
         } catch (e: Exception) {
             println("UserApi: Google login failed: ${e::class.simpleName} - ${e.message}")
-            e.printStackTrace()
             Result.failure(e)
         }
     }
@@ -99,15 +105,15 @@ class UserApi {
             val url = "$baseUrl/api/user/profile"
             println("UserApi: Getting profile at: $url")
 
-            val response: ProfileResponse = httpClient.get(url) {
+            val httpResponse = httpClient.get(url) {
                 header("Authorization", "Bearer $token")
-            }.body()
+            }
+            val response: ProfileResponse = handleResponse(httpResponse)
 
             println("UserApi: Profile retrieved for ${response.user.email}")
             Result.success(response)
         } catch (e: Exception) {
             println("UserApi: Get profile failed: ${e::class.simpleName} - ${e.message}")
-            e.printStackTrace()
             Result.failure(e)
         }
     }
@@ -123,17 +129,17 @@ class UserApi {
             val url = "$baseUrl/api/user/profile"
             println("UserApi: Updating profile at: $url")
 
-            val response: ProfileResponse = httpClient.put(url) {
+            val httpResponse = httpClient.put(url) {
                 header("Authorization", "Bearer $token")
                 contentType(ContentType.Application.Json)
                 setBody(updates)
-            }.body()
+            }
+            val response: ProfileResponse = handleResponse(httpResponse)
 
             println("UserApi: Profile updated for ${response.user.email}")
             Result.success(response)
         } catch (e: Exception) {
             println("UserApi: Update profile failed: ${e::class.simpleName} - ${e.message}")
-            e.printStackTrace()
             Result.failure(e)
         }
     }
@@ -145,20 +151,19 @@ class UserApi {
         return try {
             val url = "$baseUrl/api/user/forgot-password"
             println("UserApi: Requesting password reset at: $url")
-            println("UserApi: Email: $email")
 
             val request = ForgotPasswordRequest(email = email)
 
-            val response: GenericResponse = httpClient.post(url) {
+            val httpResponse = httpClient.post(url) {
                 contentType(ContentType.Application.Json)
                 setBody(request)
-            }.body()
+            }
+            val response: GenericResponse = handleResponse(httpResponse)
 
             println("UserApi: Password reset code sent for $email")
             Result.success(response)
         } catch (e: Exception) {
             println("UserApi: Forgot password failed: ${e::class.simpleName} - ${e.message}")
-            e.printStackTrace()
             Result.failure(e)
         }
     }
@@ -170,18 +175,17 @@ class UserApi {
         return try {
             val url = "$baseUrl/api/user/reset-password"
             println("UserApi: Resetting password at: $url")
-            println("UserApi: Email: ${request.email}")
 
-            val response: GenericResponse = httpClient.post(url) {
+            val httpResponse = httpClient.post(url) {
                 contentType(ContentType.Application.Json)
                 setBody(request)
-            }.body()
+            }
+            val response: GenericResponse = handleResponse(httpResponse)
 
             println("UserApi: Password reset successful")
             Result.success(response)
         } catch (e: Exception) {
             println("UserApi: Reset password failed: ${e::class.simpleName} - ${e.message}")
-            e.printStackTrace()
             Result.failure(e)
         }
     }
@@ -196,16 +200,114 @@ class UserApi {
 
             val request = RefreshTokenRequest(refresh_token = refreshToken)
 
-            val response: RefreshTokenResponse = httpClient.post(url) {
+            val httpResponse = httpClient.post(url) {
                 contentType(ContentType.Application.Json)
                 setBody(request)
-            }.body()
+            }
+            val response: RefreshTokenResponse = handleResponse(httpResponse)
 
             println("UserApi: Token refreshed successfully")
             Result.success(response)
         } catch (e: Exception) {
             println("UserApi: Token refresh failed: ${e::class.simpleName} - ${e.message}")
-            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+
+    // ===== Profile Photo =====
+
+    suspend fun uploadProfilePhoto(token: String, photoBase64: String, contentType: String = "image/jpeg"): Result<GenericResponse> {
+        return try {
+            val httpResponse = httpClient.put("${baseUrl}/api/user/profile-photo") {
+                header("Authorization", "Bearer $token")
+                contentType(ContentType.Application.Json)
+                setBody(ProfilePhotoUploadRequest(photoBase64, contentType))
+            }
+            val response: GenericResponse = handleResponse(httpResponse)
+            Result.success(response)
+        } catch (e: Exception) {
+            println("UserApi: Upload photo failed: ${e.message}")
+            Result.failure(e)
+        }
+    }
+
+    fun getProfilePhotoUrl(userId: String): String {
+        return "${baseUrl}/api/user/profile-photo/$userId"
+    }
+
+    // ===== Medical Records =====
+
+    suspend fun updateMedicalRecords(token: String, records: MedicalRecordsUpdateRequest): Result<GenericResponse> {
+        return try {
+            val httpResponse = httpClient.put("${baseUrl}/api/user/medical-records") {
+                header("Authorization", "Bearer $token")
+                contentType(ContentType.Application.Json)
+                setBody(records)
+            }
+            val response: GenericResponse = handleResponse(httpResponse)
+            Result.success(response)
+        } catch (e: Exception) {
+            println("UserApi: Update medical records failed: ${e.message}")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getMedicalRecords(token: String): Result<MedicalRecordsResponse> {
+        return try {
+            val httpResponse = httpClient.get("${baseUrl}/api/user/medical-records") {
+                header("Authorization", "Bearer $token")
+                contentType(ContentType.Application.Json)
+            }
+            val response: MedicalRecordsResponse = handleResponse(httpResponse)
+            Result.success(response)
+        } catch (e: Exception) {
+            println("UserApi: Get medical records failed: ${e.message}")
+            Result.failure(e)
+        }
+    }
+
+    // ===== Profile Completion =====
+
+    suspend fun getProfileCompletion(token: String): Result<ProfileCompletionResponse> {
+        return try {
+            val httpResponse = httpClient.get("${baseUrl}/api/user/profile-completion") {
+                header("Authorization", "Bearer $token")
+                contentType(ContentType.Application.Json)
+            }
+            val response: ProfileCompletionResponse = handleResponse(httpResponse)
+            Result.success(response)
+        } catch (e: Exception) {
+            println("UserApi: Get profile completion failed: ${e.message}")
+            Result.failure(e)
+        }
+    }
+
+    // ===== Caregiver Lookup & Linking =====
+
+    suspend fun lookupCaregiver(caregiverId: String): Result<CaregiverLookupResponse> {
+        return try {
+            val httpResponse = httpClient.get("${baseUrl}/api/caregiver/lookup/$caregiverId") {
+                contentType(ContentType.Application.Json)
+            }
+            val response: CaregiverLookupResponse = handleResponse(httpResponse)
+            Result.success(response)
+        } catch (e: Exception) {
+            println("UserApi: Lookup caregiver failed: ${e.message}")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun linkToCaregiver(token: String, caregiverId: String): Result<LinkCaregiverResponse> {
+        return try {
+            val httpResponse = httpClient.post("${baseUrl}/api/user/link-caregiver") {
+                header("Authorization", "Bearer $token")
+                contentType(ContentType.Application.Json)
+                setBody(LinkCaregiverRequest(caregiverId))
+            }
+            val response: LinkCaregiverResponse = handleResponse(httpResponse)
+            Result.success(response)
+        } catch (e: Exception) {
+            println("UserApi: Link caregiver failed: ${e.message}")
             Result.failure(e)
         }
     }
