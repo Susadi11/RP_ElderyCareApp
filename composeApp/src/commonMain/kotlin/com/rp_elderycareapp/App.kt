@@ -115,6 +115,7 @@ fun App() {
                 composable(NavRoutes.CHAT.route) {
                     // Chat screen takes full height (no bottom padding)
                     ChatScreen(
+                        authViewModel = authViewModel,
                         onNavigateBack = { navController.popBackStack() }
                     )
                 }
