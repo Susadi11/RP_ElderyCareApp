@@ -38,6 +38,12 @@ enum class RecordingState {
     RECORDED
 }
 
+enum class EvaluationStatus {
+    PENDING,
+    CORRECT,
+    WRONG
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MmseQuestionsScreen(
@@ -51,13 +57,18 @@ fun MmseQuestionsScreen(
     var recordingState by remember { mutableStateOf(RecordingState.IDLE) }
     var recordedAnswer by remember { mutableStateOf("") }
     var currentScore by remember { mutableStateOf(0) }
+    var evaluationStatus by remember { mutableStateOf(EvaluationStatus.PENDING) }
+    var pointsEarned by remember { mutableStateOf(0) }
     val scrollState = rememberScrollState()
 
     val textToSpeech = rememberTextToSpeech()
 
     val offsetY = remember { Animatable(50f) }
     val alpha = remember { Animatable(0f) }
-
+    LaunchedEffect(currentQuestionIndex) {
+        pointsEarned = 0
+        evaluationStatus = EvaluationStatus.PENDING
+    }
     LaunchedEffect(Unit) {
         launch {
             offsetY.animateTo(
@@ -162,16 +173,63 @@ fun MmseQuestionsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            if (recordingState == RecordingState.RECORDED) {
+            if (currentQuestion.requiresCaregiverEvaluation && recordingState == RecordingState.RECORDED) {
+                Text(
+                    text = "Caregiver: Please evaluate the answer. Your input is crucial for accurate assessment.",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.Gray,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            evaluationStatus = EvaluationStatus.CORRECT
+                            pointsEarned = currentQuestion.maxPoints
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (evaluationStatus == EvaluationStatus.CORRECT) Color(0xFF10B981) else Color.LightGray
+                        )
+                    ) {
+                        Text("Correct")
+                    }
+                    Button(
+                        onClick = {
+                            evaluationStatus = EvaluationStatus.WRONG
+                            pointsEarned = 0
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (evaluationStatus == EvaluationStatus.WRONG) Color(0xFFEF4444) else Color.LightGray
+                        )
+                    ) {
+                        Text("Wrong")
+                    }
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+
+            if ((currentQuestion.requiresCaregiverEvaluation && evaluationStatus != EvaluationStatus.PENDING) ||
+                (!currentQuestion.requiresCaregiverEvaluation && recordingState == RecordingState.RECORDED)) {
                 SubmitAnswerButton(
                     onClick = {
-                        val pointsEarned = 1 // TODO: Calculate actual score
-                        currentScore += pointsEarned
+                        val score = if (currentQuestion.requiresCaregiverEvaluation) {
+                            pointsEarned
+                        } else {
+                            1 // TODO: Calculate actual score for voice answers
+                        }
+                        currentScore += score
 
                         if (currentQuestionIndex < questions.size - 1) {
                             currentQuestionIndex++
                             recordingState = RecordingState.IDLE
                             recordedAnswer = ""
+                            evaluationStatus = EvaluationStatus.PENDING
                         } else {
                             onComplete(currentScore)
                         }
@@ -617,4 +675,4 @@ private fun RepeatQuestionButton(onClick: () -> Unit) {
 //            )
 //        }
 //    }
-//}
+//} 
