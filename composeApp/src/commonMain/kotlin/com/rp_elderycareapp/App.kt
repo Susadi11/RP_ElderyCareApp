@@ -154,9 +154,6 @@ fun App() {
                         onStartTest = {
                             // ✅ Navigate to questions screen
                             navController.navigate(NavRoutes.MMSE_QUESTIONS.route)
-                        },
-                        onComplete = { score ->
-                            navController.navigate("mmse_results/$score")
                         }
                     )
                 }
@@ -177,9 +174,9 @@ fun App() {
                         onNavigateBack = {
                             navController.popBackStack()
                         },
-//                        onTalkWithUs = {
-//                            navController.navigate(NavRoutes.CHAT.route)
-//                        }
+                        onComplete = { score ->
+                            navController.navigate("mmse_results/$score")
+                        }
                     )
                 }
 
