@@ -12,6 +12,8 @@ enum class NavRoutes(val route: String) {
 
     MMSE_QUESTIONS("mmse_questions"),
     MMSE_START_TEST("mmse_start_test"),
+
+    MMSE_RESULTS("mmse_results/{score}"),
     REMINDER("reminder"),
     PATIENT_DASHBOARD("patient_dashboard"),
     CAREGIVER_ALERTS("caregiver_alerts"),

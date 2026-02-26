@@ -154,9 +154,18 @@ fun App() {
                         onStartTest = {
                             // ✅ Navigate to questions screen
                             navController.navigate(NavRoutes.MMSE_QUESTIONS.route)
-                        },
-                        onTalkWithUs = {
-                            navController.navigate(NavRoutes.CHAT.route)
+                        }
+                    )
+                }
+
+                composable(NavRoutes.MMSE_RESULTS.route) { backStackEntry ->
+                    val score = backStackEntry.arguments?.getString("score")?.toIntOrNull() ?: 0
+                    MmseResultScreen(
+                        score = score,
+                        onNavigateToHome = {
+                            navController.navigate(NavRoutes.HOME.route) {
+                                popUpTo(NavRoutes.HOME.route) { inclusive = true }
+                            }
                         }
                     )
                 }
@@ -165,9 +174,9 @@ fun App() {
                         onNavigateBack = {
                             navController.popBackStack()
                         },
-//                        onTalkWithUs = {
-//                            navController.navigate(NavRoutes.CHAT.route)
-//                        }
+                        onComplete = { score ->
+                            navController.navigate("mmse_results/$score")
+                        }
                     )
                 }
 
