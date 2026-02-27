@@ -148,12 +148,14 @@ fun App() {
                 }
                 composable(NavRoutes.MMSE_START_TEST.route) {
                     MmseStartTestScreen(
+                        authViewModel = authViewModel,
                         onNavigateBack = {
                             navController.popBackStack()
                         },
-                        onStartTest = {
-                            // ✅ Navigate to questions screen
-                            navController.navigate(NavRoutes.MMSE_QUESTIONS.route)
+                        onStartTest = { assessmentId ->
+                            // ✅ Navigate to questions screen with assessmentId and userId
+                            val userId = authViewModel.currentUser.value?.user_id ?: "unknown_user"
+                            navController.navigate("mmse_questions/$userId/$assessmentId")
                         }
                     )
                 }
@@ -169,8 +171,12 @@ fun App() {
                         }
                     )
                 }
-                composable(NavRoutes.MMSE_QUESTIONS.route) {
+                composable("mmse_questions/{userId}/{assessmentId}") { backStackEntry ->
+                    val userId = backStackEntry.arguments?.getString("userId") ?: "unknown_user"
+                    val assessmentId = backStackEntry.arguments?.getString("assessmentId") ?: ""
                     MmseQuestionsScreen(
+                        userId = userId,
+                        assessmentId = assessmentId,
                         onNavigateBack = {
                             navController.popBackStack()
                         },

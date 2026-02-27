@@ -25,17 +25,27 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 
+import com.rp_elderycareapp.api.MmseApi
+import com.rp_elderycareapp.viewmodel.AuthViewModel
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MmseStartTestScreen(
+    authViewModel: AuthViewModel,
     onNavigateBack: () -> Unit = {},
-    onStartTest: () -> Unit = {},
+    onStartTest: (assessmentId: String) -> Unit = {},
     onTalkWithUs: () -> Unit = {}
 ) {
     // Animation for entrance
     val offsetY = remember { Animatable(50f) }
     val alpha = remember { Animatable(0f) }
     val scrollState = rememberScrollState()
+    val scope = rememberCoroutineScope()
+    val mmseApi = remember { MmseApi() }
+    var isStarting by remember { mutableStateOf(false) }
+    
+    val currentUser by authViewModel.currentUser
+    val userId = currentUser?.user_id ?: "unknown_user"
 
     LaunchedEffect(Unit) {
         launch {
@@ -135,7 +145,26 @@ fun MmseStartTestScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // Start Test Button
-                StartTestButton(onClick = onStartTest)
+                if (isStarting) {
+                    CircularProgressIndicator(color = Color(0xFF4A9FFF))
+                } else {
+                    StartTestButton(onClick = {
+                        scope.launch {
+                            isStarting = true
+                            val result = mmseApi.startMmse(userId)
+                            if (result.isSuccess) {
+                                val assessmentId = result.getOrNull()
+                                if (assessmentId != null) {
+                                    onStartTest(assessmentId)
+                                }
+                            } else {
+                                // Handle error
+                                println("Failed to start MMSE: ${result.exceptionOrNull()?.message}")
+                            }
+                            isStarting = false
+                        }
+                    })
+                }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
