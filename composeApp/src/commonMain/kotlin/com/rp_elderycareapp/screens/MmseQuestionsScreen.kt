@@ -30,6 +30,8 @@ import com.rp_elderycareapp.data.MmseQuestion
 import com.rp_elderycareapp.data.MmseQuestions
 import com.rp_elderycareapp.platform.loadImageResource
 import com.rp_elderycareapp.platform.rememberTextToSpeech
+import com.rp_elderycareapp.platform.rememberVoiceToTextParser
+import com.rp_elderycareapp.platform.rememberVoicePermission
 import kotlinx.coroutines.launch
 
 enum class RecordingState {
@@ -62,9 +64,36 @@ fun MmseQuestionsScreen(
     val scrollState = rememberScrollState()
 
     val textToSpeech = rememberTextToSpeech()
+    val voiceToTextParser = rememberVoiceToTextParser()
+    val sttState by voiceToTextParser.state.collectAsState()
+    
+    val voicePermission = rememberVoicePermission()
+
+    // Handle permission result
+    LaunchedEffect(voicePermission.hasPermission) {
+        if (voicePermission.hasPermission && recordingState == RecordingState.IDLE) {
+            recordingState = RecordingState.LISTENING
+            voiceToTextParser.startListening()
+        }
+    }
 
     val offsetY = remember { Animatable(50f) }
     val alpha = remember { Animatable(0f) }
+
+    // Sync recordedAnswer with STT state
+    LaunchedEffect(sttState.spokenText) {
+        if (recordingState == RecordingState.LISTENING) {
+            recordedAnswer = sttState.spokenText
+        }
+    }
+
+    // Handle end of speaking
+    LaunchedEffect(sttState.isSpeaking) {
+        if (!sttState.isSpeaking && recordingState == RecordingState.LISTENING && recordedAnswer.isNotEmpty()) {
+            recordingState = RecordingState.RECORDED
+        }
+    }
+
     LaunchedEffect(currentQuestionIndex) {
         pointsEarned = 0
         evaluationStatus = EvaluationStatus.PENDING
@@ -140,7 +169,8 @@ fun MmseQuestionsScreen(
             QuestionCardWithImage(
                 question = currentQuestion,
                 questionIndex = currentQuestionIndex,
-                recordedAnswer = if (recordingState == RecordingState.RECORDED) recordedAnswer else null,
+                recordedAnswer = if (recordingState != RecordingState.IDLE) recordedAnswer else null,
+                isListening = recordingState == RecordingState.LISTENING,
                 onPlayAudio = playQuestionAudio
             )
 
@@ -150,22 +180,19 @@ fun MmseQuestionsScreen(
                 recordingState = recordingState,
                 onClick = {
                     when (recordingState) {
-                        RecordingState.IDLE -> {
-                            recordingState = RecordingState.LISTENING
-                            // TODO: Start actual voice recording
-                            kotlinx.coroutines.GlobalScope.launch {
-                                kotlinx.coroutines.delay(2000)
-                                recordedAnswer = "watch" // Replace with actual transcription
-                                recordingState = RecordingState.RECORDED
+                        RecordingState.IDLE, RecordingState.RECORDED -> {
+                            voiceToTextParser.reset()
+                            recordedAnswer = ""
+                            if (voicePermission.hasPermission) {
+                                recordingState = RecordingState.LISTENING
+                                voiceToTextParser.startListening()
+                            } else {
+                                voicePermission.request()
                             }
                         }
                         RecordingState.LISTENING -> {
+                            voiceToTextParser.stopListening()
                             recordingState = RecordingState.RECORDED
-                            recordedAnswer = "watch"
-                        }
-                        RecordingState.RECORDED -> {
-                            recordingState = RecordingState.LISTENING
-                            recordedAnswer = ""
                         }
                     }
                 }
@@ -322,6 +349,7 @@ private fun QuestionCardWithImage(
     question: MmseQuestion,
     questionIndex: Int,
     recordedAnswer: String?,
+    isListening: Boolean,
     onPlayAudio: () -> Unit
 ) {
     Card(
@@ -389,7 +417,7 @@ private fun QuestionCardWithImage(
                 }
             }
 
-            if (recordedAnswer != null) {
+            if (recordedAnswer != null || isListening) {
                 Spacer(modifier = Modifier.height(20.dp))
 
                 Card(
@@ -401,14 +429,14 @@ private fun QuestionCardWithImage(
                         ),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFFD1FAE5)
+                        containerColor = if (isListening) Color(0xFFEFF6FF) else Color(0xFFD1FAE5)
                     )
                 ) {
                     Text(
-                        text = "\"$recordedAnswer\"",
+                        text = if (isListening && recordedAnswer.isNullOrEmpty()) "Say something..." else "\"${recordedAnswer ?: ""}\"",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Color(0xFF065F46),
+                        color = if (isListening) Color(0xFF1E40AF) else Color(0xFF065F46),
                         textAlign = TextAlign.Center,
                         modifier = Modifier
                             .fillMaxWidth()
