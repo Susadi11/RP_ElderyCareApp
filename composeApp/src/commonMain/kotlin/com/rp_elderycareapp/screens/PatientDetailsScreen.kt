@@ -49,6 +49,8 @@ fun PatientDetailsScreen(
 
     // Load data on screen entry
     LaunchedEffect(Unit) {
+        viewModel.clearError()  // clear any stale error from previous screens
+        viewModel.clearSuccess()
         viewModel.loadProfileCompletion()
         viewModel.loadMedicalRecords()
     }

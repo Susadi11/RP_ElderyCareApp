@@ -78,8 +78,18 @@ class AuthViewModel(private val preferencesManager: PreferencesManager) {
 
             withContext(Dispatchers.Main) {
                 result.onSuccess { response ->
+                    // Save tokens (same pattern as login)
+                    preferencesManager.saveAccessToken(response.access_token)
+                    preferencesManager.saveRefreshToken(response.refresh_token)
+
+                    // Save user profile
+                    val profileJson = json.encodeToString(response.user)
+                    preferencesManager.saveUserProfile(profileJson)
+
+                    // Update state
                     currentUser.value = response.user
-                    successMessage.value = "Registration successful! Please login."
+                    isAuthenticated.value = true
+                    successMessage.value = "Registration successful!"
                     println("AuthViewModel: Registration successful for ${response.user.email}")
                 }.onFailure { error ->
                     errorMessage.value = parseErrorMessage(error)
@@ -386,8 +396,8 @@ class AuthViewModel(private val preferencesManager: PreferencesManager) {
                 if (response.success) {
                     successMessage.value = response.message
                     caregiverLookupResult.value = null
-                    // Refresh profile
-                    withContext(Dispatchers.Default) { loadUserProfile() }
+                    // Refresh profile to reflect the newly linked caregiver
+                    loadUserProfile()
                 } else {
                     errorMessage.value = "Failed to link caregiver"
                 }

@@ -50,6 +50,15 @@ class ReminderViewModel(private val alarmManager: PlatformAlarmManager? = null) 
     var responseAnalysis by mutableStateOf<ReminderResponseResult?>(null)
         private set
     
+    var stopAlarmResult by mutableStateOf<StopAlarmResponse?>(null)
+        private set
+    
+    var snoozeTrackedResult by mutableStateOf<SnoozeTrackedResponse?>(null)
+        private set
+    
+    var helpRequestResult by mutableStateOf<HelpRequestResponse?>(null)
+        private set
+    
     private val _activeAlarm = MutableStateFlow<Reminder?>(null)
     val activeAlarm: StateFlow<Reminder?> = _activeAlarm.asStateFlow()
     
@@ -79,10 +88,6 @@ class ReminderViewModel(private val alarmManager: PlatformAlarmManager? = null) 
                 
                 // Trigger platform-specific alarm (music, vibration, notification)
                 alarmManager?.triggerAlarm(reminder)
-                
-                // Auto-show alarm dialog
-                selectedReminder = reminder
-                showResponseDialog = true
             }
         }
         
@@ -105,10 +110,20 @@ class ReminderViewModel(private val alarmManager: PlatformAlarmManager? = null) 
         println("=== STARTING loadReminders: user=$userId, filter=$statusFilter ===")
         reminderState = ReminderUiState.Loading
         scope.launch {
-            val result = apiService.getUserReminders(userId, statusFilter)
+            // For active tab, get all non-completed reminders (includes snoozed)
+            val actualFilter = if (statusFilter == "active") null else statusFilter
+            val result = apiService.getUserReminders(userId, actualFilter)
             result
-                .onSuccess { reminders ->
-                    println("=== LOAD SUCCESS: Got ${reminders.size} reminders ===")
+                .onSuccess { allReminders ->
+                    // Filter client-side for active tab to include both active and snoozed
+                    val reminders = if (statusFilter == "active") {
+                        allReminders.filter { it.status.lowercase() == "active" || it.status.lowercase() == "snoozed" }
+                    } else if (statusFilter == "completed") {
+                        allReminders.filter { it.status.lowercase() == "completed" }
+                    } else {
+                        allReminders
+                    }
+                    println("=== LOAD SUCCESS: Got ${reminders.size} reminders (${allReminders.size} total) ===")
                     reminderState = if (reminders.isEmpty()) {
                         ReminderUiState.Success(emptyList())
                     } else {
@@ -140,9 +155,17 @@ class ReminderViewModel(private val alarmManager: PlatformAlarmManager? = null) 
                     onSuccess()
                 }
                 .onFailure { error ->
-                    println("Failed to create reminder: ${error.message}")
-                    error.printStackTrace()
-                    reminderState = ReminderUiState.Error(error.message ?: "Failed to create reminder")
+                    if (error.message == "__RELOAD__") {
+                        // Server created the reminder but did not echo back the object.
+                        // Treat as success: reload the list and continue.
+                        println("Reminder created (no echo). Reloading list...")
+                        loadReminders(request.userId, "active")
+                        onSuccess()
+                    } else {
+                        println("Failed to create reminder: ${error.message}")
+                        error.printStackTrace()
+                        reminderState = ReminderUiState.Error(error.message ?: "Failed to create reminder")
+                    }
                 }
         }
     }
@@ -266,29 +289,70 @@ class ReminderViewModel(private val alarmManager: PlatformAlarmManager? = null) 
         alarmManager?.dismissAlarm()
         _activeAlarm.value = null
     }    
-    // Delete a reminder
+    // Delete a reminder — optimistic: remove from list immediately, sync server in background
     fun deleteReminder(reminderId: String, userId: String) {
+        // Snapshot current list so we can revert on failure
+        val previousState = reminderState
+
+        // Optimistically remove from local list right now
+        if (previousState is ReminderUiState.Success) {
+            val updatedList = previousState.reminders.filter { it.id != reminderId }
+            reminderState = ReminderUiState.Success(updatedList)
+        }
+
         scope.launch {
             apiService.deleteReminder(reminderId)
                 .onSuccess {
+                    // Server confirmed deletion — do a quiet background reload to sync
+                    println("Delete confirmed by server, reloading list")
                     loadReminders(userId)
                 }
                 .onFailure { error ->
-                    reminderState = ReminderUiState.Error(error.message ?: "Failed to delete reminder")
+                    println("Delete API call failed: ${error.message}")
+                    // Revert optimistic removal so the item reappears
+                    reminderState = previousState
                 }
         }
     }
     
-    // Update reminder
+    // Update reminder — optimistic: update list immediately, sync server in background
     fun updateReminder(reminderId: String, request: CreateReminderRequest, onSuccess: () -> Unit = {}) {
+        // Snapshot current list so we can revert on failure
+        val previousState = reminderState
+
+        // Optimistically update the item in-place so the card reflects the new values instantly
+        if (previousState is ReminderUiState.Success) {
+            val updatedList = previousState.reminders.map { reminder ->
+                if (reminder.id == reminderId) {
+                    reminder.copy(
+                        title = request.title,
+                        description = request.description,
+                        category = request.category,
+                        priority = request.priority
+                    )
+                } else reminder
+            }
+            reminderState = ReminderUiState.Success(updatedList)
+        }
+
+        onSuccess() // dismiss the dialog immediately
+
         scope.launch {
             apiService.updateReminder(reminderId, request)
                 .onSuccess {
+                    println("Update confirmed by server, reloading list")
                     loadReminders(request.userId)
-                    onSuccess()
                 }
                 .onFailure { error ->
-                    reminderState = ReminderUiState.Error(error.message ?: "Failed to update reminder")
+                    if (error.message == "__RELOAD__") {
+                        // Server updated but did not echo back — treat as success
+                        println("Update confirmed (no echo), reloading list")
+                        loadReminders(request.userId)
+                    } else {
+                        println("Update failed: ${error.message}")
+                        // Revert optimistic change
+                        reminderState = previousState
+                    }
                 }
         }
     }
@@ -331,10 +395,6 @@ class ReminderViewModel(private val alarmManager: PlatformAlarmManager? = null) 
                                 
                                 // Trigger platform-specific alarm (music, vibration, notification)
                                 alarmManager?.triggerAlarm(reminder)
-                                
-                                // Auto-show alarm dialog
-                                selectedReminder = reminder
-                                showResponseDialog = true
                             }
                         } else {
                             println("=== ✓ No urgent reminders at this time ===")
@@ -349,6 +409,118 @@ class ReminderViewModel(private val alarmManager: PlatformAlarmManager? = null) 
                 // Poll every 30 seconds
                 delay(30000)
             }
+        }
+    }
+    
+    // NEW: Stop alarm with response tracking (replaces completeReminder)
+    fun stopAlarmWithResponse(reminderId: String, userId: String, userResponse: String, onComplete: (StopAlarmResponse) -> Unit = {}) {
+        scope.launch {
+            println("=== Stopping alarm with response: $reminderId ===")
+            // Always clear the alarm UI immediately so the user is never stuck
+            _activeAlarm.value = null
+            alarmManager?.dismissAlarm()
+
+            apiService.stopAlarmWithResponse(reminderId, userResponse)
+                .onSuccess { response ->
+                    println("=== Alarm stopped! Risk score: ${response.cognitiveAnalysis.riskScore} ===")
+                    println("=== Caregiver notified: ${response.cognitiveAnalysis.caregiverNotified} ===")
+                    stopAlarmResult = response
+                    loadReminders(userId, "active")
+                    onComplete(response)
+                }
+                .onFailure { error ->
+                    println("=== Failed to stop alarm (alarm already dismissed): ${error.message} ===")
+                    // Still reload and navigate – don't leave the user on an error screen
+                    loadReminders(userId, "active")
+                }
+        }
+    }
+    
+    // NEW: Snooze with behavior tracking (replaces snoozeReminder - uses 3 min default)
+    fun snoozeReminderTracked(reminderId: String, userId: String, delayMinutes: Int = 3, onComplete: (SnoozeTrackedResponse) -> Unit = {}) {
+        scope.launch {
+            println("=== Snoozing reminder (tracked): $reminderId for $delayMinutes min ===")
+            // Always clear the alarm UI immediately so the screen is never stuck
+            _activeAlarm.value = null
+            alarmManager?.dismissAlarm()
+
+            apiService.snoozeReminderTracked(reminderId, delayMinutes)
+                .onSuccess { response ->
+                    println("=== SNOOZE SUCCESS ===")
+                    println("=== Reminder ID: ${response.reminderId} ===")
+                    println("=== New scheduled time from API: '${response.newScheduledTime}' ===")
+                    println("=== Count this week: ${response.snoozeCountWeek}, rate: ${response.snoozeRate} ===")
+                    println("=== Caregiver alert: ${response.caregiverAlert} ===")
+                    
+                    snoozeTrackedResult = response
+                    
+                    // Update the reminder locally with new scheduled time
+                    updateReminderScheduledTime(reminderId, response.newScheduledTime)
+                    
+                    // Don't call loadReminders immediately - let the local update take effect
+                    // loadReminders(userId, "active")
+                    onComplete(response)
+                }
+                .onFailure { error ->
+                    println("=== Failed to snooze (alarm already dismissed): ${error.message} ===")
+                    loadReminders(userId, "active")
+                }
+        }
+    }
+    
+    // Update reminder's scheduled time locally (for snooze)
+    private fun updateReminderScheduledTime(reminderId: String, newScheduledTime: String) {
+        println("🔄 UPDATING LOCAL REMINDER:")
+        println("   Reminder ID: $reminderId")
+        println("   New scheduled time: '$newScheduledTime'")
+        
+        val currentState = reminderState
+        if (currentState is ReminderUiState.Success) {
+            val oldReminder = currentState.reminders.find { it.id == reminderId }
+            println("   Old scheduled time: '${oldReminder?.scheduledTime}'")
+            
+            val updatedReminders = currentState.reminders.map { reminder ->
+                if (reminder.id == reminderId) {
+                    val updated = reminder.copy(
+                        scheduledTime = newScheduledTime,
+                        status = "snoozed"
+                    )
+                    println("   ✅ Updated reminder: ID=${updated.id}, time='${updated.scheduledTime}', status='${updated.status}'")
+                    updated
+                } else {
+                    reminder
+                }
+            }
+            reminderState = ReminderUiState.Success(updatedReminders)
+            println("   ✅ Local state updated successfully")
+        } else {
+            println("   ❌ Current state is not Success: ${currentState::class.simpleName}")
+        }
+    }
+    
+    // NEW: Request help when confused
+    fun requestHelp(reminderId: String, userId: String, helpReason: String = "confused", onComplete: (HelpRequestResponse) -> Unit = {}) {
+        scope.launch {
+            println("=== Requesting help for reminder: $reminderId, reason: $helpReason ===")
+            apiService.requestHelp(reminderId, helpReason)
+                .onSuccess { response ->
+                    println("=== Help requested! Caregiver notified: ${response.caregiverNotified} ===")
+                    println("=== Risk score: ${response.cognitiveRiskScore} ===")
+                    helpRequestResult = response
+                    
+                    // Clear active alarm
+                    _activeAlarm.value = null
+                    alarmManager?.dismissAlarm()
+                    
+                    // Reload reminders
+                    loadReminders(userId)
+                    
+                    onComplete(response)
+                }
+                .onFailure { error ->
+                    println("=== Failed to request help: ${error.message} ===")
+                    reminderState = ReminderUiState.Error(error.message ?: "Failed to request help")
+                }
         }
     }
     

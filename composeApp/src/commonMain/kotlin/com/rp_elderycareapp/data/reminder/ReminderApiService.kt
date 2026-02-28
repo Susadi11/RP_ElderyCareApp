@@ -48,6 +48,10 @@ class ReminderApiService {
                 println("API Response: status=${apiResponse.status}, data=${apiResponse.data}, error=${apiResponse.error}")
                 if (apiResponse.data != null) {
                     Result.success(apiResponse.data)
+                } else if (apiResponse.status == "success") {
+                    // Server created the reminder but did not return the object in "data".
+                    // Signal success with a sentinel so the ViewModel reloads the list.
+                    Result.failure(Exception("__RELOAD__"))
                 } else {
                     Result.failure(Exception(apiResponse.error ?: "No data returned from server"))
                 }
@@ -219,8 +223,34 @@ class ReminderApiService {
                 contentType(ContentType.Application.Json)
                 setBody(request)
             }
-            val apiResponse: ApiResponse<Reminder> = response.body()
-            Result.success(apiResponse.data!!)
+            println("Update response status: ${response.status}")
+            if (response.status.value !in 200..299) {
+                val errorBody = try { response.body<String>() } catch (e: Exception) { "Unknown error" }
+                return Result.failure(Exception("Server error: ${response.status.value} - $errorBody"))
+            }
+            // Try wrapped ApiResponse first
+            val responseText: String = response.body()
+            val json = Json { ignoreUnknownKeys = true; isLenient = true }
+            return try {
+                val apiResponse: ApiResponse<Reminder> = json.decodeFromString(responseText)
+                if (apiResponse.data != null) {
+                    Result.success(apiResponse.data)
+                } else if (apiResponse.status == "success") {
+                    // Server updated but did not echo back — signal a silent success
+                    Result.failure(Exception("__RELOAD__"))
+                } else {
+                    Result.failure(Exception(apiResponse.error ?: "Failed to update reminder"))
+                }
+            } catch (e: Exception) {
+                // Try parsing as direct Reminder
+                try {
+                    val reminder: Reminder = json.decodeFromString(responseText)
+                    Result.success(reminder)
+                } catch (e2: Exception) {
+                    // Can't parse body but HTTP was 2xx — treat as success
+                    Result.failure(Exception("__RELOAD__"))
+                }
+            }
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -230,8 +260,20 @@ class ReminderApiService {
     suspend fun deleteReminder(reminderId: String): Result<String> {
         return try {
             val response = client.delete("$baseUrl/delete/$reminderId")
-            val apiResponse: ApiResponse<String> = response.body()
-            Result.success(apiResponse.message ?: "Deleted successfully")
+            println("Delete response status: ${response.status}")
+            if (response.status.value !in 200..299) {
+                val errorBody = try { response.body<String>() } catch (e: Exception) { "Unknown error" }
+                return Result.failure(Exception("Server error: ${response.status.value} - $errorBody"))
+            }
+            // Any 2xx response = deleted successfully
+            val msg = try {
+                val json = Json { ignoreUnknownKeys = true; isLenient = true }
+                val apiResponse: ApiResponse<String> = json.decodeFromString(response.body())
+                apiResponse.message ?: "Deleted successfully"
+            } catch (e: Exception) {
+                "Deleted successfully"
+            }
+            Result.success(msg)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -368,6 +410,80 @@ class ReminderApiService {
             Result.success(response)
         } catch (e: Exception) {
             println("Get due reminders error: ${e.message}")
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+    
+    // 16. Stop alarm with response tracking (NEW - replaces complete)
+    suspend fun stopAlarmWithResponse(reminderId: String, userResponse: String): Result<StopAlarmResponse> {
+        return try {
+            println("Stopping alarm with response: $reminderId")
+            val response = client.post("$baseUrl/stop/$reminderId") {
+                parameter("user_response", userResponse)
+            }
+            println("Stop alarm response status: ${response.status}")
+            val stopResponse: StopAlarmResponse = response.body()
+            println("Cognitive risk score: ${stopResponse.cognitiveAnalysis.riskScore}")
+            Result.success(stopResponse)
+        } catch (e: Exception) {
+            println("Stop alarm error: ${e.message}")
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+    
+    // 17. Snooze with behavior tracking (NEW - replaces snoozeReminder)
+    suspend fun snoozeReminderTracked(reminderId: String, delayMinutes: Int = 5): Result<SnoozeTrackedResponse> {
+        return try {
+            println("Snoozing reminder (tracked): $reminderId for $delayMinutes minutes")
+            val response = client.post("$baseUrl/snooze-tracked/$reminderId") {
+                parameter("delay_minutes", delayMinutes)
+            }
+            println("Snooze tracked response status: ${response.status}")
+            val snoozeResponse: SnoozeTrackedResponse = response.body()
+            println("Snooze count this week: ${snoozeResponse.snoozeCountWeek}, rate: ${snoozeResponse.snoozeRate}")
+            println("🔍 SNOOZE NEW SCHEDULED TIME: ${snoozeResponse.newScheduledTime}")
+            println("🔍 SNOOZE REMINDER ID: ${snoozeResponse.reminderId}")
+            Result.success(snoozeResponse)
+        } catch (e: Exception) {
+            println("Snooze tracked error: ${e.message}")
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+    
+    // 18. Request help when confused (NEW)
+    suspend fun requestHelp(reminderId: String, helpReason: String = "confused"): Result<HelpRequestResponse> {
+        return try {
+            println("Requesting help for reminder: $reminderId, reason: $helpReason")
+            val response = client.post("$baseUrl/help-request/$reminderId") {
+                parameter("help_reason", helpReason)
+            }
+            println("Help request response status: ${response.status}")
+            val helpResponse: HelpRequestResponse = response.body()
+            println("Caregiver notified: ${helpResponse.caregiverNotified}, risk score: ${helpResponse.cognitiveRiskScore}")
+            Result.success(helpResponse)
+        } catch (e: Exception) {
+            println("Request help error: ${e.message}")
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+    
+    // 19. Get weekly dementia risk report (NEW)
+    suspend fun getWeeklyDementiaRisk(userId: String, weeks: Int = 4): Result<WeeklyDementiaRiskResponse> {
+        return try {
+            println("Fetching weekly dementia risk for user: $userId, weeks: $weeks")
+            val response = client.get("$baseUrl/weekly-dementia-risk/$userId") {
+                parameter("weeks", weeks)
+            }
+            println("Weekly dementia risk response status: ${response.status}")
+            val riskResponse: WeeklyDementiaRiskResponse = response.body()
+            println("Overall trend: ${riskResponse.overallTrend}, avg risk: ${riskResponse.averageRiskScore}")
+            Result.success(riskResponse)
+        } catch (e: Exception) {
+            println("Get weekly dementia risk error: ${e.message}")
             e.printStackTrace()
             Result.failure(e)
         }
