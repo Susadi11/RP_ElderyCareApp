@@ -35,7 +35,7 @@ import kotlinx.coroutines.launch
 fun AudioRecorderDialog(
     audioRecorder: AudioRecorder,
     onDismiss: () -> Unit,
-    onSubmit: (String) -> Unit,
+    onSubmit: (audioFilePath: String, onComplete: (isSuccess: Boolean, message: String) -> Unit) -> Unit,
     userId: String
 ) {
     val scope = rememberCoroutineScope()
@@ -170,7 +170,16 @@ fun AudioRecorderDialog(
                         onSubmit = {
                             if (audioFilePath != null) {
                                 isSubmitting = true
-                                onSubmit(audioFilePath!!)
+                                showError = false
+                                onSubmit(audioFilePath!!) { isSuccess, message ->
+                                    if (!isSuccess) {
+                                        isSubmitting = false
+                                        errorMessage = message.ifBlank { "Failed to create reminder" }
+                                        showError = true
+                                    }
+                                    // On success the parent dismisses the dialog,
+                                    // so isSubmitting does not need resetting.
+                                }
                             }
                         }
                     )

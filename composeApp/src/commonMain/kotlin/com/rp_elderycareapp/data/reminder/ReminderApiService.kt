@@ -4,11 +4,16 @@ import com.rp_elderycareapp.getApiBaseUrl
 import com.rp_elderycareapp.ApiConfig
 import io.ktor.client.*
 import io.ktor.client.call.*
+import io.ktor.client.plugins.HttpRequestRetry
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 
 
@@ -17,13 +22,26 @@ class ReminderApiService {
     // Using base URL from Constants.kt - automatically configured for emulator/physical device
     private val baseUrl = getApiBaseUrl() + ApiConfig.Endpoints.REMINDERS
     
+    private val json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+        prettyPrint = true
+    }
+
     private val client = HttpClient {
         install(ContentNegotiation) {
-            json(Json {
-                ignoreUnknownKeys = true
-                isLenient = true
-                prettyPrint = true
-            })
+            json(json)
+        }
+        // Transcription can take 15–30 s — keep the socket alive long enough
+        install(HttpTimeout) {
+            requestTimeoutMillis  = 90_000  // 90 s total request time
+            connectTimeoutMillis  = 15_000  // 15 s to establish TCP
+            socketTimeoutMillis   = 90_000  // 90 s idle socket read
+        }
+        // Retry once on connection-level failures (e.g. "Software caused connection abort")
+        install(HttpRequestRetry) {
+            retryOnException(maxRetries = 1, retryOnTimeout = false)
+            delayMillis { 500 }
         }
     }
     
@@ -101,9 +119,26 @@ class ReminderApiService {
                 setBody(buildMultipartFormData(boundary, audioFile, fileName, userId, priority, caregiverIds))
                 contentType(ContentType.parse("multipart/form-data; boundary=$boundary"))
             }
-            
+
             println("Audio upload response status: ${response.status}")
-            val audioResponse: AudioReminderResponse = response.body()
+
+            // Read body as plain text first — this is immune to stream-closed
+            // SocketExceptions that occur when parsing a streaming body directly.
+            val rawBody = try { response.bodyAsText() } catch (e: Exception) {
+                return Result.failure(Exception("Failed to read server response: ${e.message}"))
+            }
+            println("Audio upload raw body: ${rawBody.take(300)}")
+
+            // Surface 4xx/5xx errors with the backend's detail message
+            if (response.status.value !in 200..299) {
+                val detail = try {
+                    json.parseToJsonElement(rawBody).jsonObject["detail"]?.jsonPrimitive?.content
+                        ?: rawBody
+                } catch (_: Exception) { rawBody }
+                return Result.failure(Exception(detail))
+            }
+
+            val audioResponse: AudioReminderResponse = json.decodeFromString(rawBody)
             println("Transcription: ${audioResponse.transcription}")
             Result.success(audioResponse)
         } catch (e: Exception) {
