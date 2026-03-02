@@ -237,7 +237,7 @@ fun ReminderScreen() {
             AudioRecorderDialog(
                 audioRecorder = audioRecorder,
                 onDismiss = { showAudioRecorderDialog = false },
-                onSubmit = { audioFilePath ->
+                onSubmit = { audioFilePath, onComplete ->
                     scope.launch {
                         viewModel.createReminderFromAudio(
                             audioFilePath = audioFilePath,
@@ -247,9 +247,11 @@ fun ReminderScreen() {
                                 println("✅ Reminder created from audio!")
                                 println("Transcription: ${response.transcription}")
                                 showAudioRecorderDialog = false
+                                onComplete(true, "Reminder created successfully!")
                             },
                             onError = { error ->
                                 println("❌ Error: $error")
+                                onComplete(false, error)
                             }
                         )
                     }
