@@ -107,6 +107,11 @@ fun App() {
                             navController.navigate(NavRoutes.LOGIN.route) {
                                 popUpTo(NavRoutes.FORGOT_PASSWORD.route) { inclusive = true }
                             }
+                        },
+                        onNavigateToLogin = {
+                            navController.navigate(NavRoutes.LOGIN.route) {
+                                popUpTo(NavRoutes.LOGIN.route) { inclusive = true }
+                            }
                         }
                     )
                 }

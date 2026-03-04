@@ -4,7 +4,7 @@ const val SERVER_PORT = 8080
 
 object ApiConfig {
     // Backend API port
-    const val BACKEND_PORT = 8000
+    const val BACKEND_PORT = 8080
 
     // Base URLs for different platforms
     // For Android emulator: use 10.0.2.2 instead of localhost
