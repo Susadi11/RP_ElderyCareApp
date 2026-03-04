@@ -1,6 +1,7 @@
 package com.rp_elderycareapp.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -33,7 +34,8 @@ expect fun ResetPasswordVisibilityIcon(): Unit
 fun ResetPasswordScreen(
     authViewModel: AuthViewModel,
     initialEmail: String = "",
-    onResetSuccess: () -> Unit = {}
+    onResetSuccess: () -> Unit = {},
+    onNavigateToLogin: () -> Unit = {}
 ) {
     var email by remember { mutableStateOf(initialEmail) }
     var resetCode by remember { mutableStateOf("") }
@@ -76,13 +78,6 @@ fun ResetPasswordScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(60.dp))
-
-            // Header icon
-            Text(
-                text = "🔑",
-                fontSize = 80.sp,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
 
             // Title
             Text(
@@ -317,6 +312,28 @@ fun ResetPasswordScreen(
                         fontWeight = FontWeight.SemiBold
                     )
                 }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Back to login link
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Remember your password?",
+                    fontSize = 14.sp,
+                    color = AppColors.SecondaryText
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "Sign In",
+                    fontSize = 14.sp,
+                    color = AppColors.Primary,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.clickable { onNavigateToLogin() }
+                )
             }
 
             Spacer(modifier = Modifier.height(32.dp))

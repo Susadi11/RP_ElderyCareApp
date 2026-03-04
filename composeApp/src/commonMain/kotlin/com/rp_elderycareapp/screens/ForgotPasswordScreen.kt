@@ -67,13 +67,6 @@ fun ForgotPasswordScreen(
         ) {
             Spacer(modifier = Modifier.height(60.dp))
 
-            // Header icon/image
-            Text(
-                text = "🔐",
-                fontSize = 80.sp,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-
             // Title
             Text(
                 text = "Forgot Password?",
