@@ -54,7 +54,7 @@ class ReminderWebSocketService(
                 } else {
                     listOf(url, "80")
                 }
-                val port = portStr.toIntOrNull() ?: 8000
+                val port = portStr.toIntOrNull() ?: 8080
                 
                 println("=== Connecting to WebSocket: $host:$port/ws/user/$userId ===")
                 

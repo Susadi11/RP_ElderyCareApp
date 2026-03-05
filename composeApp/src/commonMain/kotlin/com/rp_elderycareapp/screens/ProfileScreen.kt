@@ -267,7 +267,7 @@ fun ProfileScreen(
                     OutlinedTextField(
                         value = baseUrlInput,
                         onValueChange = { baseUrlInput = it },
-                        placeholder = { Text("http://localhost:8000") },
+                        placeholder = { Text("http://localhost:8080") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp)

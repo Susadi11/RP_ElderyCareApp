@@ -149,7 +149,7 @@ fun ChatScreen(
                                 // Fallback to local response on error
                                 val aiResponse = ChatMessage(
                                     id = "ai_${Clock.System.now().toEpochMilliseconds()}",
-                                    content = "I'm having trouble connecting to the server. Please make sure the backend is running on localhost:8000",
+                                    content = "I'm having trouble connecting to the server. Please make sure the backend is running on localhost:8080",
                                     sender = MessageSender.AI_COMPANION,
                                     type = MessageType.TEXT
                                 )
