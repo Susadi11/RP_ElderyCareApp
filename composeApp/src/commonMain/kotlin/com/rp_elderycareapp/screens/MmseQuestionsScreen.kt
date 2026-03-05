@@ -117,7 +117,7 @@ fun MmseQuestionsScreen(
 
     val playQuestionAudio = {
         val textToSpeak = when (currentQuestionIndex) {
-            13, 14 -> "What is this called?"
+            13 -> "What are these called?"
             else -> currentQuestion.question
         }
         textToSpeech.speak(textToSpeak)
@@ -408,7 +408,7 @@ private fun QuestionCardWithImage(
                 .padding(32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (questionIndex != 13 && questionIndex != 14) {
+            if (questionIndex != 13) {
                 Text(
                     text = question.question,
                     fontSize = 20.sp,
@@ -421,19 +421,8 @@ private fun QuestionCardWithImage(
             }
 
             when (questionIndex) {
-                13 -> { // Question 14 - Wristwatch
-                    ObjectImageDisplay(
-                        imageType = "watch",
-                        label = "Wristwatch",
-                        onPlayAudio = onPlayAudio
-                    )
-                }
-                14 -> { // Question 15 - Pencil
-                    ObjectImageDisplay(
-                        imageType = "pencil",
-                        label = "Pencil",
-                        onPlayAudio = onPlayAudio
-                    )
+                13 -> { // Combined Naming Question
+                    NamingObjectsDisplay(onPlayAudio = onPlayAudio)
                 }
                 else -> {
                     IconButton(
@@ -483,6 +472,101 @@ private fun QuestionCardWithImage(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun NamingObjectsDisplay(
+    onPlayAudio: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        IconButton(
+            onClick = onPlayAudio,
+            modifier = Modifier
+                .size(56.dp)
+                .shadow(
+                    elevation = 4.dp,
+                    shape = CircleShape
+                )
+                .background(
+                    color = Color(0xFFE3F2FD),
+                    shape = CircleShape
+                )
+        ) {
+            Icon(
+                imageVector = Icons.Default.VolumeUp,
+                contentDescription = "Play Question",
+                tint = Color(0xFF3B82F6),
+                modifier = Modifier.size(28.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Watch Card
+            Card(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(180.dp)
+                    .shadow(elevation = 8.dp, shape = RoundedCornerShape(16.dp)),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = loadImageResource("watch"),
+                        contentDescription = "Watch",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit
+                    )
+                }
+            }
+
+            // Pencil Card
+            Card(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(180.dp)
+                    .shadow(elevation = 8.dp, shape = RoundedCornerShape(16.dp)),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = loadImageResource("pencil"),
+                        contentDescription = "Pencil",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Text(
+            text = "What are these called?",
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF1A1A2E),
+            textAlign = TextAlign.Center
+        )
     }
 }
 

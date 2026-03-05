@@ -142,24 +142,16 @@ object MmseQuestions {
         // NAMING (2 points total)
         MmseQuestion(
             id = 14,
-            question = "What is this called? (Show wristwatch)",
+            question = "What are these called?",
             category = "Naming",
-            maxPoints = 1,
-            instructions = "Accept 'wristwatch' or 'watch'. Do not accept 'clock' or 'time'",
-            timeLimit = 10,
-        ),
-        MmseQuestion(
-            id = 15,
-            question = "What is this called? (Show pencil)",
-            category = "Naming",
-            maxPoints = 1,
-            instructions = "Accept 'pencil' only. Score 0 for 'pen'",
-            timeLimit = 10
+            maxPoints = 2,
+            instructions = "Identify both the wristwatch and the pencil.",
+            timeLimit = 20
         ),
 
         // REPETITION (1 point total)
         MmseQuestion(
-            id = 16,
+            id = 15,
             question = "I would like you to repeat a phrase after me: No ifs, ands or buts",
             category = "Repetition",
             maxPoints = 1,
