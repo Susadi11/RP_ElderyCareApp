@@ -201,7 +201,8 @@ class AuthViewModel(private val preferencesManager: PreferencesManager) {
         preferencesManager.clearAuthData()
         currentUser.value = null
         isAuthenticated.value = false
-        successMessage.value = "Logged out successfully"
+        successMessage.value = null
+        errorMessage.value = null
         println("AuthViewModel: User logged out")
     }
 

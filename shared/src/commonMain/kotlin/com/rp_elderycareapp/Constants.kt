@@ -9,8 +9,14 @@ object ApiConfig {
     // Base URLs for different platforms
     // For Android emulator: use 10.0.2.2 instead of localhost
     // For iOS simulator and other platforms: use localhost
-    const val BASE_URL_LOCALHOST = "http://localhost:$BACKEND_PORT"
-    const val BASE_URL_ANDROID_EMULATOR = "http://10.0.2.2:$BACKEND_PORT"
+
+    // ===== LOCALHOST (uncomment for local development) =====
+    const val BASE_URL_LOCALHOST = "http://localhost:8080"
+    const val BASE_URL_ANDROID_EMULATOR = "http://10.0.2.2:8080"
+
+    // ===== HOSTED (uncomment for production) =====
+    // const val BASE_URL_LOCALHOST = "https://api.hale-eldery.life"
+    // const val BASE_URL_ANDROID_EMULATOR = "https://api.hale-eldery.life"
 
     // API Endpoints
     object Endpoints {

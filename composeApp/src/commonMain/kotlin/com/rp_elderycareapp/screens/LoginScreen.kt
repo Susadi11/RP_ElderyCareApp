@@ -56,14 +56,20 @@ fun LoginScreen(
     var passwordVisible by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     
+    // Clear any stale messages from previous screens (e.g. signup or logout)
+    LaunchedEffect(Unit) {
+        authViewModel.clearSuccess()
+        authViewModel.clearError()
+    }
+    
     // Observe ViewModel state
     val isLoading = authViewModel.isLoading.value
     val errorMessage = authViewModel.errorMessage.value
     val successMessage = authViewModel.successMessage.value
     
     // Navigate on successful login
-    LaunchedEffect(authViewModel.isAuthenticated.value) {
-        if (authViewModel.isAuthenticated.value) {
+    LaunchedEffect(successMessage) {
+        if (successMessage != null && successMessage == "Login successful!") {
             onLoginSuccess()
         }
     }

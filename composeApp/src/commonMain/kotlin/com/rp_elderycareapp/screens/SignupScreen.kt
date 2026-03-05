@@ -59,14 +59,20 @@ fun SignupScreen(
     var agreedToTerms by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     
+    // Clear any stale messages from previous screens (e.g. logout success message)
+    LaunchedEffect(Unit) {
+        authViewModel.clearSuccess()
+        authViewModel.clearError()
+    }
+    
     // Observe ViewModel state
     val isLoading = authViewModel.isLoading.value
     val errorMessage = authViewModel.errorMessage.value
     val successMessage = authViewModel.successMessage.value
     
-    // Navigate on successful registration
+    // Navigate on successful registration (check specifically for registration message)
     LaunchedEffect(successMessage) {
-        if (successMessage != null && successMessage.contains("successful")) {
+        if (successMessage != null && successMessage == "Registration successful!") {
             kotlinx.coroutines.delay(1500)  // Show success message briefly
             onSignupSuccess()
         }
