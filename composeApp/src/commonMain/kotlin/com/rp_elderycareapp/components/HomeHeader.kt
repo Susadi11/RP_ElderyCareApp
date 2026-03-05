@@ -73,6 +73,7 @@ fun HomeHeader(
                     fontWeight = FontWeight.SemiBold,
                     color = AppColors.SecondaryText
                 ),
+             
                 textAlign = TextAlign.Start
             )
         }

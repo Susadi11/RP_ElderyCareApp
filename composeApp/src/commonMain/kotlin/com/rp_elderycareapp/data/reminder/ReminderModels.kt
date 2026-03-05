@@ -249,8 +249,30 @@ data class ApiResponse<T>(
 // WebSocket message types
 @Serializable
 data class WebSocketMessage(
-    val type: String,  // "reminder", "alert", "update"
-    val data: String   // JSON string of reminder or alert
+    val type: String,  // "reminder", "reminder_repeat", "alarm_acknowledged", "alarm_missed", "alert", "update"
+    val data: String? = null,              // JSON string of reminder or alert (used by "reminder" type)
+    @SerialName("reminder_id") val reminderId: String? = null,
+    val title: String? = null,
+    val message: String? = null,
+    @SerialName("repeat_count") val repeatCount: Int? = null,
+    val urgency: String? = null,
+    val timestamp: String? = null
+)
+
+// Alarm acknowledge response from backend
+@Serializable
+data class AcknowledgeAlarmResponse(
+    val status: String,
+    val message: String,
+    @SerialName("reminder_id") val reminderId: String? = null
+)
+
+// Represents an alarm-related event broadcast from the WebSocket layer
+data class AlarmEvent(
+    val type: String,          // "reminder_repeat", "alarm_acknowledged", "alarm_missed"
+    val reminderId: String,
+    val repeatCount: Int = 0,
+    val message: String? = null
 )
 
 // Due now response for polling
@@ -274,4 +296,131 @@ data class AudioReminderResponse(
     val transcription: String,
     @SerialName("audio_file")
     val audioFile: String
+)
+
+// Cognitive analysis features for dementia detection
+@Serializable
+data class CognitiveAnalysisFeatures(
+    @SerialName("filler_words")
+    val fillerWords: Double = 0.0,
+    @SerialName("semantic_incoherence")
+    val semanticIncoherence: Double = 0.0,
+    @SerialName("memory_markers")
+    val memoryMarkers: Int = 0,
+    @SerialName("confusion_markers")
+    val confusionMarkers: Int = 0,
+    @SerialName("repetitions")
+    val repetitions: Double = 0.0,
+    @SerialName("lexical_diversity")
+    val lexicalDiversity: Double = 0.0
+)
+
+// Cognitive analysis result from stop alarm
+@Serializable
+data class CognitiveAnalysis(
+    @SerialName("risk_score")
+    val riskScore: Double,
+    @SerialName("interaction_type")
+    val interactionType: String,
+    val features: CognitiveAnalysisFeatures,
+    @SerialName("caregiver_notified")
+    val caregiverNotified: Boolean,
+    @SerialName("confusion_detected")
+    val confusionDetected: Boolean,
+    @SerialName("memory_issue_detected")
+    val memoryIssueDetected: Boolean
+)
+
+// Stop alarm with response tracking
+@Serializable
+data class StopAlarmResponse(
+    val status: String,
+    val message: String,
+    @SerialName("reminder_id")
+    val reminderId: String,
+    @SerialName("completed_at")
+    val completedAt: String,
+    @SerialName("cognitive_analysis")
+    val cognitiveAnalysis: CognitiveAnalysis,
+    @SerialName("has_next_occurrence")
+    val hasNextOccurrence: Boolean = false,
+    @SerialName("next_reminder_id")
+    val nextReminderId: String? = null,
+    @SerialName("next_scheduled_time")
+    val nextScheduledTime: String? = null
+)
+
+// Snooze with behavior tracking
+@Serializable
+data class SnoozeTrackedResponse(
+    val status: String,
+    val message: String,
+    @SerialName("reminder_id")
+    val reminderId: String,
+    @SerialName("new_scheduled_time")
+    val newScheduledTime: String,
+    @SerialName("snooze_count_week")
+    val snoozeCountWeek: Int,
+    @SerialName("snooze_rate")
+    val snoozeRate: Double,
+    @SerialName("caregiver_alert")
+    val caregiverAlert: Boolean,
+    val recommendation: String
+)
+
+// Help request response
+@Serializable
+data class HelpRequestResponse(
+    val status: String,
+    val message: String,
+    @SerialName("reminder_id")
+    val reminderId: String,
+    @SerialName("cognitive_risk_score")
+    val cognitiveRiskScore: Double,
+    @SerialName("caregiver_notified")
+    val caregiverNotified: Boolean,
+    @SerialName("caregivers_alerted")
+    val caregiversAlerted: List<String> = emptyList(),
+    val recommendation: String,
+    @SerialName("help_reason")
+    val helpReason: String
+)
+
+// Weekly cognitive data point
+@Serializable
+data class WeeklyCognitiveData(
+    val week: Int,
+    @SerialName("start_date")
+    val startDate: String,
+    @SerialName("end_date")
+    val endDate: String,
+    @SerialName("avg_risk_score")
+    val avgRiskScore: Double,
+    @SerialName("confused_count")
+    val confusedCount: Int,
+    @SerialName("confirmed_count")
+    val confirmedCount: Int,
+    @SerialName("ignored_count")
+    val ignoredCount: Int
+)
+
+// Weekly dementia risk report
+@Serializable
+data class WeeklyDementiaRiskResponse(
+    val status: String,
+    @SerialName("user_id")
+    val userId: String,
+    @SerialName("weeks_analyzed")
+    val weeksAnalyzed: Int,
+    @SerialName("overall_trend")
+    val overallTrend: String,
+    @SerialName("weekly_data")
+    val weeklyData: List<WeeklyCognitiveData>,
+    @SerialName("average_risk_score")
+    val averageRiskScore: Double,
+    @SerialName("total_confused_interactions")
+    val totalConfusedInteractions: Int,
+    val recommendation: String,
+    @SerialName("requires_medical_attention")
+    val requiresMedicalAttention: Boolean
 )

@@ -23,9 +23,8 @@ import kotlinx.datetime.toLocalDateTime
 @Composable
 fun ReminderCard(
     reminder: Reminder,
-    onSnooze: () -> Unit,
-    onComplete: () -> Unit,
-    onRespond: () -> Unit,
+    onEdit: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val priorityColor = when (reminder.priority.lowercase()) {
@@ -44,7 +43,8 @@ fun ReminderCard(
     }
     
     // Parse scheduled time from backend
-    println("🔍 RAW scheduled_time from backend: '${reminder.scheduledTime}'")
+    println("🔍 RAW scheduled_time for '${reminder.title}': '${reminder.scheduledTime}'")
+    println("🔍 Reminder ID: ${reminder.id}, Status: ${reminder.status}")
     
     val scheduledTime = try {
         // Backend format: "2026-01-08T08:00:00.000+00:00"
@@ -87,6 +87,11 @@ fun ReminderCard(
     val localDateTime = scheduledTime.toLocalDateTime(TimeZone.UTC)
     val nowDateTime = now.toLocalDateTime(TimeZone.currentSystemDefault())
     
+    println("🔍 Scheduled instant: $scheduledTime")
+    println("🔍 Local date time: $localDateTime") 
+    println("🔍 Now: $now")
+    println("🔍 Diff minutes: $diffMillis")
+    
     // Format time in 12-hour format with AM/PM - showing the time as user entered it
     val hour12 = if (localDateTime.hour == 0) 12 
                  else if (localDateTime.hour > 12) localDateTime.hour - 12 
@@ -110,14 +115,17 @@ fun ReminderCard(
     println("⏰ Display time: $timeString")
     
     // Status indicator
+    val isSnoozed = reminder.status.lowercase() == "snoozed"
     val statusText = when {
+        isSnoozed && diffMillis < 60 -> "Snoozed (${diffMillis}m)"
+        isSnoozed -> "Snoozed"
         diffMillis < -5 -> "Overdue"
         diffMillis <= 5 -> "Due Now"
         diffMillis < 60 -> "In $diffMillis min"
         else -> null
     }
     
-    val isOverdue = diffMillis < 0
+    val isOverdue = diffMillis < 0 && !isSnoozed
     val isDueNow = diffMillis >= -5 && diffMillis <= 5
     
     println("   Display: $scheduledTimeText ${statusText?.let { "($it)" } ?: ""}")
@@ -159,18 +167,49 @@ fun ReminderCard(
                     )
                 }
                 
-                Box(
-                    modifier = Modifier
-                        .background(priorityColor.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
-                        .border(1.dp, priorityColor, RoundedCornerShape(8.dp))
-                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Text(
-                        text = reminder.priority.uppercase(),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = priorityColor,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Box(
+                        modifier = Modifier
+                            .background(priorityColor.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
+                            .border(1.dp, priorityColor, RoundedCornerShape(8.dp))
+                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = reminder.priority.uppercase(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = priorityColor,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    if (onEdit != null) {
+                        IconButton(
+                            onClick = onEdit,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Edit",
+                                tint = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                    if (onDelete != null) {
+                        IconButton(
+                            onClick = onDelete,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete",
+                                tint = Color(0xFFD32F2F),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
                 }
             }
             
@@ -246,6 +285,7 @@ fun ReminderCard(
                             modifier = Modifier
                                 .background(
                                     when {
+                                        isSnoozed -> Color(0xFF2196F3).copy(alpha = 0.1f) // Blue for snoozed
                                         isOverdue -> Color(0xFFD32F2F).copy(alpha = 0.1f)
                                         isDueNow -> Color(0xFF4CAF50).copy(alpha = 0.1f)
                                         else -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f)
@@ -258,6 +298,7 @@ fun ReminderCard(
                                 text = statusText,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = when {
+                                    isSnoozed -> Color(0xFF2196F3) // Blue for snoozed
                                     isOverdue -> Color(0xFFD32F2F)
                                     isDueNow -> Color(0xFF4CAF50)
                                     else -> MaterialTheme.colorScheme.secondary
@@ -269,44 +310,6 @@ fun ReminderCard(
                 }
             }
             
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // Action buttons
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedButton(
-                    onClick = onSnooze,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Snooze,
-                        contentDescription = "Snooze",
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Snooze")
-                }
-                
-                Button(
-                    onClick = onRespond,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = "Respond",
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Respond")
-                }
-            }
         }
     }
 }

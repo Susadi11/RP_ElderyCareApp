@@ -4,6 +4,7 @@ import com.rp_elderycareapp.ApiConfig
 import com.rp_elderycareapp.getApiBaseUrl
 import io.ktor.client.*
 import io.ktor.client.call.*
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
@@ -21,6 +22,11 @@ class ChatApi {
                 isLenient = true
                 prettyPrint = true
             })
+        }
+        install(HttpTimeout) {
+            connectTimeoutMillis = 30_000   // 30s to establish connection
+            requestTimeoutMillis = 180_000  // 180s for LLaMA to respond
+            socketTimeoutMillis = 180_000
         }
     }
 

@@ -5,7 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -27,54 +26,35 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rp_elderycareapp.ui.theme.AppColors
 
+// Platform-specific visibility icon
 @Composable
-expect fun SignupVisibilityIcon(isVisible: Boolean)
+expect fun ResetPasswordVisibilityIcon(): Unit
 
 @Composable
-expect fun SignupPersonIcon()
-
-@Composable
-expect fun SignupEmailIcon()
-
-@Composable
-expect fun SignupPhoneIcon()
-
-@Composable
-expect fun SignupLockIcon()
-
-@Composable
-fun SignupScreen(
+fun ResetPasswordScreen(
     authViewModel: AuthViewModel,
-    onSignupSuccess: () -> Unit = {},
+    initialEmail: String = "",
+    onResetSuccess: () -> Unit = {},
     onNavigateToLogin: () -> Unit = {}
 ) {
-    var fullName by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
-    var age by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf(initialEmail) }
+    var resetCode by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
-    var agreedToTerms by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    
-    // Clear any stale messages from previous screens (e.g. logout success message)
-    LaunchedEffect(Unit) {
-        authViewModel.clearSuccess()
-        authViewModel.clearError()
-    }
     
     // Observe ViewModel state
     val isLoading = authViewModel.isLoading.value
     val errorMessage = authViewModel.errorMessage.value
     val successMessage = authViewModel.successMessage.value
     
-    // Navigate on successful registration (check specifically for registration message)
+    // Navigate on success
     LaunchedEffect(successMessage) {
-        if (successMessage != null && successMessage == "Registration successful!") {
-            kotlinx.coroutines.delay(1500)  // Show success message briefly
-            onSignupSuccess()
+        if (successMessage != null && successMessage.contains("successful")) {
+            kotlinx.coroutines.delay(1500)
+            onResetSuccess()
         }
     }
 
@@ -84,12 +64,11 @@ fun SignupScreen(
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        AppColors.Background,
-                        AppColors.LightBlue.copy(alpha = 0.1f)
+                        AppColors.LightLavender,
+                        AppColors.LightPeach
                     )
                 )
             )
-            .statusBarsPadding()
     ) {
         Column(
             modifier = Modifier
@@ -98,74 +77,38 @@ fun SignupScreen(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(60.dp))
 
-            // App Logo
-            AppLogo(
-                modifier = Modifier
-                    .size(180.dp)
-                    .padding(bottom = 16.dp)
-            )
-
+            // Title
             Text(
-                text = "Create Account",
+                text = "Reset Password",
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
                 color = AppColors.DeepBlue,
                 textAlign = TextAlign.Center
             )
 
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Subtitle
             Text(
-                text = "Join us and start your care journey",
+                text = "Enter the 6-digit code sent to your email and create a new password.",
                 fontSize = 16.sp,
-                fontWeight = FontWeight.Normal,
                 color = AppColors.SecondaryText,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 8.dp)
+                lineHeight = 24.sp
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(40.dp))
 
-            // Full Name field
-            OutlinedTextField(
-                value = fullName,
-                onValueChange = {
-                    fullName = it
-                    authViewModel.clearError()
-                },
-                label = { Text("Full Name") },
-                placeholder = { Text("Enter your full name") },
-                leadingIcon = { SignupPersonIcon() },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Text,
-                    imeAction = ImeAction.Next
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(64.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = AppColors.Primary,
-                    unfocusedBorderColor = AppColors.Primary.copy(alpha = 0.3f),
-                    focusedLabelColor = AppColors.Primary,
-                    cursorColor = AppColors.Primary
-                )
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Email field
+            // Email field (readonly if pre-filled)
             OutlinedTextField(
                 value = email,
-                onValueChange = {
-                    email = it
-                    authViewModel.clearError()
-                },
-                label = { Text("Email") },
+                onValueChange = { email = it },
+                label = { Text("Email Address") },
                 placeholder = { Text("Enter your email") },
-                leadingIcon = { SignupEmailIcon() },
                 singleLine = true,
+                enabled = initialEmail.isEmpty(),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Email,
                     imeAction = ImeAction.Next
@@ -178,52 +121,26 @@ fun SignupScreen(
                     focusedBorderColor = AppColors.Primary,
                     unfocusedBorderColor = AppColors.Primary.copy(alpha = 0.3f),
                     focusedLabelColor = AppColors.Primary,
-                    cursorColor = AppColors.Primary
+                    cursorColor = AppColors.Primary,
+                    disabledBorderColor = AppColors.Primary.copy(alpha = 0.2f),
+                    disabledLabelColor = AppColors.SecondaryText
                 )
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Phone field
+            // Reset code field
             OutlinedTextField(
-                value = phone,
+                value = resetCode,
                 onValueChange = {
-                    phone = it
+                    // Only allow digits, max 6
+                    if (it.length <= 6 && it.all { char -> char.isDigit() }) {
+                        resetCode = it
+                    }
                     authViewModel.clearError()
                 },
-                label = { Text("Phone Number") },
-                placeholder = { Text("Enter your phone number") },
-                leadingIcon = { SignupPhoneIcon() },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Phone,
-                    imeAction = ImeAction.Next
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(64.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = AppColors.Primary,
-                    unfocusedBorderColor = AppColors.Primary.copy(alpha = 0.3f),
-                    focusedLabelColor = AppColors.Primary,
-                    cursorColor = AppColors.Primary
-                )
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Age field (optional)
-            OutlinedTextField(
-                value = age,
-                onValueChange = {
-                    // Only allow digits
-                    if (it.isEmpty() || it.all { char -> char.isDigit() }) {
-                        age = it
-                    }
-                },
-                label = { Text("Age (Optional)") },
-                placeholder = { Text("Enter your age") },
+                label = { Text("Reset Code") },
+                placeholder = { Text("Enter 6-digit code") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Number,
@@ -243,23 +160,22 @@ fun SignupScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Password field
+            // New password field
             OutlinedTextField(
-                value = password,
+                value = newPassword,
                 onValueChange = {
-                    password = it
+                    newPassword = it
                     authViewModel.clearError()
                 },
-                label = { Text("Password") },
-                placeholder = { Text("Create a password") },
-                leadingIcon = { SignupLockIcon() },
+                label = { Text("New Password") },
+                placeholder = { Text("Create new password") },
+                singleLine = true,
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                        SignupVisibilityIcon(passwordVisible)
+                        ResetPasswordVisibilityIcon()
                     }
                 },
-                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                singleLine = true,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Password,
                     imeAction = ImeAction.Next
@@ -278,7 +194,7 @@ fun SignupScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Confirm Password field
+            // Confirm password field
             OutlinedTextField(
                 value = confirmPassword,
                 onValueChange = {
@@ -286,23 +202,17 @@ fun SignupScreen(
                     authViewModel.clearError()
                 },
                 label = { Text("Confirm Password") },
-                placeholder = { Text("Re-enter your password") },
-                leadingIcon = { SignupLockIcon() },
+                placeholder = { Text("Re-enter new password") },
+                singleLine = true,
+                visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
                     IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
-                        SignupVisibilityIcon(confirmPasswordVisible)
+                        ResetPasswordVisibilityIcon()
                     }
                 },
-                visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                singleLine = true,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Password,
                     imeAction = ImeAction.Done
-                ),
-                keyboardActions = KeyboardActions(
-                    onDone = {
-                        // Perform validation and signup
-                    }
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -316,61 +226,63 @@ fun SignupScreen(
                 )
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Terms and conditions checkbox
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Checkbox(
-                    checked = agreedToTerms,
-                    onCheckedChange = { agreedToTerms = it },
-                    colors = CheckboxDefaults.colors(
-                        checkedColor = AppColors.Primary,
-                        uncheckedColor = AppColors.Primary.copy(alpha = 0.5f)
-                    )
-                )
-                Text(
-                    text = "I agree to the Terms & Conditions",
-                    fontSize = 14.sp,
-                    color = AppColors.SecondaryText,
-                    modifier = Modifier.padding(start = 8.dp)
-                )
-            }
+            Spacer(modifier = Modifier.height(24.dp))
 
             // Error message
             if (errorMessage != null) {
-                Text(
-                    text = errorMessage!!,
-                    color = AppColors.MutedRed,
-                    fontSize = 14.sp,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFFFEBEE)
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = errorMessage,
+                        color = Color(0xFFC62828),
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            // Success message
+            if (successMessage != null) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFE8F5E9)
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = successMessage,
+                        color = Color(0xFF2E7D32),
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
 
-            // Sign up button
+            // Reset password button
             Button(
                 onClick = {
                     when {
-                        fullName.isEmpty() -> authViewModel.errorMessage.value = "Please enter your full name"
                         email.isEmpty() -> authViewModel.errorMessage.value = "Please enter your email"
-                        phone.isEmpty() -> authViewModel.errorMessage.value = "Please enter your phone number"
-                        password.isEmpty() -> authViewModel.errorMessage.value = "Please create a password"
-                        password.length < 8 -> authViewModel.errorMessage.value = "Password must be at least 8 characters"
+                        resetCode.isEmpty() -> authViewModel.errorMessage.value = "Please enter the reset code"
+                        resetCode.length != 6 -> authViewModel.errorMessage.value = "Reset code must be 6 digits"
+                        newPassword.isEmpty() -> authViewModel.errorMessage.value = "Please enter a new password"
+                        newPassword.length < 8 -> authViewModel.errorMessage.value = "Password must be at least 8 characters"
                         confirmPassword.isEmpty() -> authViewModel.errorMessage.value = "Please confirm your password"
-                        password != confirmPassword -> authViewModel.errorMessage.value = "Passwords do not match"
-                        !agreedToTerms -> authViewModel.errorMessage.value = "Please agree to the Terms & Conditions"
+                        newPassword != confirmPassword -> authViewModel.errorMessage.value = "Passwords do not match"
                         else -> {
                             scope.launch {
-                                authViewModel.register(
-                                    fullName = fullName,
+                                authViewModel.resetPassword(
                                     email = email,
-                                    phoneNumber = phone,
-                                    age = age.toIntOrNull(),
-                                    password = password,
+                                    resetCode = resetCode,
+                                    newPassword = newPassword,
                                     confirmPassword = confirmPassword
                                 )
                             }
@@ -395,7 +307,7 @@ fun SignupScreen(
                     )
                 } else {
                     Text(
-                        text = "Sign Up",
+                        text = "Reset Password",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -404,20 +316,21 @@ fun SignupScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Login link
+            // Back to login link
             Row(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Already have an account? ",
-                    color = AppColors.SecondaryText,
-                    fontSize = 16.sp
+                    text = "Remember your password?",
+                    fontSize = 14.sp,
+                    color = AppColors.SecondaryText
                 )
+                Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = "Sign In",
+                    fontSize = 14.sp,
                     color = AppColors.Primary,
-                    fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.clickable { onNavigateToLogin() }
                 )

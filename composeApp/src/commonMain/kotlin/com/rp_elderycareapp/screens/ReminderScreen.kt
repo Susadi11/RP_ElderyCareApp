@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import com.rp_elderycareapp.components.reminder.ReminderCard
 import com.rp_elderycareapp.components.reminder.ReminderResponseDialog
 import com.rp_elderycareapp.components.reminder.AlarmDialog
+import com.rp_elderycareapp.components.reminder.AlarmResponseDialog
 import com.rp_elderycareapp.components.reminder.AudioRecorderDialog
 import com.rp_elderycareapp.data.reminder.*
 import com.rp_elderycareapp.viewmodel.ReminderViewModel
@@ -42,15 +43,29 @@ fun ReminderScreen() {
     val scope = rememberCoroutineScope()
     
     val activeAlarm by viewModel.activeAlarm.collectAsState()
+    val alarmRepeatCount by viewModel.alarmRepeatCount.collectAsState()
+    val missedAlarmMessage by viewModel.missedAlarmMessage.collectAsState()
     
     var selectedTab by remember { mutableStateOf(0) }
     var showCreateDialog by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
+    var reminderToEdit by remember { mutableStateOf<Reminder?>(null) }
     var showReminderOptionsDialog by remember { mutableStateOf(false) }
     var showAudioRecorderDialog by remember { mutableStateOf(false) }
+    var showAlarmResponseDialog by remember { mutableStateOf(false) }
+    var reminderForResponse by remember { mutableStateOf<Reminder?>(null) }
+    var showMissedAlarmDialog by remember { mutableStateOf(false) }
     
     LaunchedEffect(Unit) {
         viewModel.loadReminders(userId)
         viewModel.initWebSocket(userId)  // Initialize WebSocket for real-time alarms
+    }
+
+    // Show missed alarm dialog whenever the ViewModel signals a missed event
+    LaunchedEffect(missedAlarmMessage) {
+        if (missedAlarmMessage != null) {
+            showMissedAlarmDialog = true
+        }
     }
     
     DisposableEffect(Unit) {
@@ -149,13 +164,14 @@ fun ReminderScreen() {
                     } else {
                         ReminderList(
                             reminders = state.reminders,
-                            onSnooze = { reminder ->
-                                scope.launch {
-                                    viewModel.snoozeReminder(reminder.id, userId, 15)
-                                }
+                            onEdit = { reminder ->
+                                reminderToEdit = reminder
+                                showEditDialog = true
                             },
-                            onRespond = { reminder ->
-                                viewModel.showResponseDialog(reminder)
+                            onDelete = { reminder ->
+                                scope.launch {
+                                    viewModel.deleteReminder(reminder.id, userId)
+                                }
                             }
                         )
                     }
@@ -188,6 +204,25 @@ fun ReminderScreen() {
                         viewModel.hideResponseDialog()
                     }
                 },
+                onSnooze = { delayMinutes ->
+                    // Snooze the reminder for specified minutes
+                    val reminderId = viewModel.selectedReminder?.id
+                    println("🔍 SNOOZE button clicked: reminderId=$reminderId, delay=$delayMinutes min")
+                    if (reminderId != null) {
+                        scope.launch {
+                            viewModel.snoozeReminderTracked(reminderId, userId, delayMinutes) { response ->
+                                println("🔍 SNOOZE SUCCESS: new time = ${response.newScheduledTime}")
+                                // Navigate to Active tab
+                                selectedTab = 0
+                                // Hide the dialog
+                                viewModel.hideResponseDialog()
+                                if (response.caregiverAlert) {
+                                    println("⚠️ Frequent snoozing detected - caregiver notified")
+                                }
+                            }
+                        }
+                    }
+                },
                 responseResult = viewModel.responseAnalysis
             )
         }
@@ -212,7 +247,7 @@ fun ReminderScreen() {
             AudioRecorderDialog(
                 audioRecorder = audioRecorder,
                 onDismiss = { showAudioRecorderDialog = false },
-                onSubmit = { audioFilePath ->
+                onSubmit = { audioFilePath, onComplete ->
                     scope.launch {
                         viewModel.createReminderFromAudio(
                             audioFilePath = audioFilePath,
@@ -222,9 +257,11 @@ fun ReminderScreen() {
                                 println("✅ Reminder created from audio!")
                                 println("Transcription: ${response.transcription}")
                                 showAudioRecorderDialog = false
+                                onComplete(true, "Reminder created successfully!")
                             },
                             onError = { error ->
                                 println("❌ Error: $error")
+                                onComplete(false, error)
                             }
                         )
                     }
@@ -243,10 +280,33 @@ fun ReminderScreen() {
                 onCreate = { request ->
                     println("Create button clicked")
                     showCreateDialog = false  // Close immediately
+                    selectedTab = 0           // Switch to Active tab so the new reminder is visible
                     viewModel.createReminder(request) {
                         println("Reminder creation completed")
-                        // Reload to ensure we have latest
-                        viewModel.loadReminders(userId, "active")
+                        // loadReminders is already called inside createReminder – no duplicate call needed
+                    }
+                },
+                userId = userId
+            )
+        }
+        
+        // Edit reminder dialog
+        if (showEditDialog && reminderToEdit != null) {
+            EditReminderDialog(
+                reminder = reminderToEdit!!,
+                onDismiss = {
+                    showEditDialog = false
+                    reminderToEdit = null
+                },
+                onUpdate = { request ->
+                    // Capture id before clearing state to avoid any NPE risk
+                    val idToUpdate = reminderToEdit?.id
+                    showEditDialog = false
+                    reminderToEdit = null
+                    if (idToUpdate != null) {
+                        viewModel.updateReminder(idToUpdate, request) {
+                            println("Reminder updated successfully")
+                        }
                     }
                 },
                 userId = userId
@@ -257,18 +317,123 @@ fun ReminderScreen() {
         if (activeAlarm != null) {
             AlarmDialog(
                 reminder = activeAlarm!!,
+                repeatCount = alarmRepeatCount,
                 onDismiss = {
-                    viewModel.dismissAlarm()
+                    // Removed dismiss functionality (no data tracking)
+                    // User must interact with alarm via Stop, Snooze, or Need Help
                 },
                 onSnooze = { delayMinutes ->
+                    val alarmId = activeAlarm?.id ?: return@AlarmDialog
                     scope.launch {
-                        viewModel.snoozeReminder(activeAlarm!!.id, userId, delayMinutes)
-                        viewModel.dismissAlarm()
+                        viewModel.snoozeReminderTracked(alarmId, userId, delayMinutes) { response ->
+                            selectedTab = 0
+                            if (response.caregiverAlert) {
+                                println("⚠️ Frequent snoozing detected - caregiver notified")
+                            }
+                        }
                     }
                 },
-                onComplete = {
-                    viewModel.completeReminder(activeAlarm!!.id, userId) {
-                        viewModel.dismissAlarm()
+                onStopAlarm = {
+                    // Show response dialog instead of completing immediately
+                    reminderForResponse = activeAlarm
+                    showAlarmResponseDialog = true
+                },
+                onNeedHelp = {
+                    scope.launch {
+                        viewModel.requestHelp(activeAlarm!!.id, userId, "confused") { response ->
+                            // Show reassuring message
+                            println("💙 Help requested - caregivers notified: ${response.caregiverNotified}")
+                            // Could show a dialog here with the help message
+                        }
+                    }
+                }
+            )
+        }
+        
+        // Response dialog - shown after clicking "Stop Alarm"
+        // User writes what they did → confirmed → acknowledgeReminder is called
+        if (showAlarmResponseDialog && reminderForResponse != null) {
+            AlarmResponseDialog(
+                reminder = reminderForResponse!!,
+                onDismiss = {
+                    showAlarmResponseDialog = false
+                    reminderForResponse = null
+                },
+                onSubmit = { userResponse ->
+                    // Capture ID immediately before any state changes to avoid NPE
+                    val reminderId = reminderForResponse?.id
+                    showAlarmResponseDialog = false
+                    reminderForResponse = null
+                    if (reminderId != null) {
+                        scope.launch {
+                            // First acknowledge the alarm (stops it at backend level)
+                            viewModel.acknowledgeReminder(
+                                reminderId = reminderId,
+                                userId = userId,
+                                acknowledgmentMethod = "tap"
+                            )
+                            // Then record cognitive response for dementia tracking
+                            viewModel.stopAlarmWithResponse(
+                                reminderId,
+                                userId,
+                                userResponse
+                            ) { response ->
+                                selectedTab = 0
+                                if (response.cognitiveAnalysis.riskScore > 0.7) {
+                                    println("⚠️ High cognitive risk detected - caregiver notified")
+                                }
+                                if (response.cognitiveAnalysis.confusionDetected) {
+                                    println("⚠️ Confusion detected in response")
+                                }
+                                if (response.cognitiveAnalysis.memoryIssueDetected) {
+                                    println("⚠️ Memory issue detected in response")
+                                }
+                            }
+                        }
+                    }
+                }
+            )
+        }
+
+        // Missed alarm dialog — shown when backend escalates and marks reminder as missed
+        if (showMissedAlarmDialog && missedAlarmMessage != null) {
+            AlertDialog(
+                onDismissRequest = {
+                    showMissedAlarmDialog = false
+                    viewModel.clearMissedAlarmMessage()
+                    selectedTab = 0
+                },
+                icon = {
+                    Icon(
+                        Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = Color(0xFFDC2626),
+                        modifier = Modifier.size(36.dp)
+                    )
+                },
+                title = {
+                    Text(
+                        "Missed Reminder",
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFDC2626)
+                    )
+                },
+                text = {
+                    Text(
+                        missedAlarmMessage!!,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showMissedAlarmDialog = false
+                            viewModel.clearMissedAlarmMessage()
+                            selectedTab = 0
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626))
+                    ) {
+                        Text("OK")
                     }
                 }
             )
@@ -392,8 +557,8 @@ private fun ReminderOptionsDialog(
 @Composable
 private fun ReminderList(
     reminders: List<Reminder>,
-    onSnooze: (Reminder) -> Unit,
-    onRespond: (Reminder) -> Unit
+    onEdit: (Reminder) -> Unit,
+    onDelete: (Reminder) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -402,9 +567,8 @@ private fun ReminderList(
         items(reminders) { reminder ->
             ReminderCard(
                 reminder = reminder,
-                onSnooze = { onSnooze(reminder) },
-                onComplete = { onRespond(reminder) },
-                onRespond = { onRespond(reminder) }
+                onEdit = { onEdit(reminder) },
+                onDelete = { onDelete(reminder) }
             )
         }
     }
@@ -871,6 +1035,307 @@ private fun VoiceCommandDialog(
 
 private fun String.capitalize() = this.replaceFirstChar { 
     if (it.isLowerCase()) it.titlecase() else it.toString() 
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun EditReminderDialog(
+    reminder: Reminder,
+    onDismiss: () -> Unit,
+    onUpdate: (CreateReminderRequest) -> Unit,
+    userId: String
+) {
+    // Parse existing reminder data
+    val existingDateTime = try {
+        val instant = kotlinx.datetime.Instant.parse(reminder.scheduledTime.replace("+00:00", "Z").replace(".000", ""))
+        instant.toLocalDateTime(kotlinx.datetime.TimeZone.UTC)
+    } catch (e: Exception) {
+        kotlinx.datetime.Clock.System.now().toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault())
+    }
+    
+    var title by remember { mutableStateOf(reminder.title) }
+    var description by remember { mutableStateOf(reminder.description ?: "") }
+    var category by remember { mutableStateOf(reminder.category) }
+    var priority by remember { mutableStateOf(reminder.priority) }
+    
+    // Pre-fill date and time
+    var selectedDate by remember { 
+        mutableStateOf("${existingDateTime.year}-${existingDateTime.monthNumber.toString().padStart(2, '0')}-${existingDateTime.dayOfMonth.toString().padStart(2, '0')}")
+    }
+    var selectedTime by remember { 
+        mutableStateOf("${existingDateTime.hour.toString().padStart(2, '0')}:${existingDateTime.minute.toString().padStart(2, '0')}")
+    }
+    
+    // Repeat pattern
+    var repeatPattern by remember { mutableStateOf(reminder.repeat_pattern) }
+    var repeatIntervalMinutes by remember { mutableStateOf(reminder.repeatIntervalMinutes?.toString() ?: "") }
+    
+    // Caregiver notification settings
+    var notifyCaregiverOnMiss by remember { mutableStateOf(reminder.notifyCaregiverOnMiss) }
+    var escalationThresholdMinutes by remember { mutableStateOf(reminder.escalationThresholdMinutes.toString()) }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit Reminder") },
+        containerColor = Color.White,
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Title *") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Description") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 2
+                )
+                
+                // DATE PICKER
+                Column {
+                    Text(
+                        "Scheduled Date *",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    var showDatePicker by remember { mutableStateOf(false) }
+                    val datePickerState = rememberDatePickerState(
+                        initialSelectedDateMillis = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+                    )
+                    
+                    OutlinedCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { showDatePicker = true }
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.CalendarToday,
+                                    contentDescription = "Date",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = selectedDate,
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                            }
+                            Icon(
+                                Icons.Default.ArrowDropDown,
+                                contentDescription = "Pick date"
+                            )
+                        }
+                    }
+                    
+                    if (showDatePicker) {
+                        DatePickerDialog(
+                            onDismissRequest = { showDatePicker = false },
+                            confirmButton = {
+                                TextButton(
+                                    onClick = {
+                                        datePickerState.selectedDateMillis?.let { millis ->
+                                            val instant = kotlinx.datetime.Instant.fromEpochMilliseconds(millis)
+                                            val dateTime = instant.toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault())
+                                            selectedDate = "${dateTime.year}-${dateTime.monthNumber.toString().padStart(2, '0')}-${dateTime.dayOfMonth.toString().padStart(2, '0')}"
+                                        }
+                                        showDatePicker = false
+                                    }
+                                ) {
+                                    Text("OK")
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showDatePicker = false }) {
+                                    Text("Cancel")
+                                }
+                            },
+                            colors = DatePickerDefaults.colors(
+                                containerColor = Color.White
+                            )
+                        ) {
+                            DatePicker(
+                                state = datePickerState,
+                                colors = DatePickerDefaults.colors(
+                                    containerColor = Color.White
+                                )
+                            )
+                        }
+                    }
+                }
+                
+                // TIME PICKER
+                Column {
+                    Text(
+                        "Scheduled Time *",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    OutlinedTextField(
+                        value = selectedTime,
+                        onValueChange = { newValue ->
+                            val filtered = newValue.filter { it.isDigit() || it == ':' }
+                            if (filtered.length <= 5) {
+                                selectedTime = filtered
+                            }
+                        },
+                        label = { Text("Time (HH:MM)") },
+                        placeholder = { Text("e.g., 08:30, 14:15") },
+                        leadingIcon = { Icon(Icons.Default.Schedule, "Time") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                
+                Column {
+                    Text(
+                        "Category",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        listOf("medication", "appointment", "meal", "exercise").forEach { cat ->
+                            FilterChip(
+                                selected = category == cat,
+                                onClick = { category = cat },
+                                label = { Text(cat.capitalize()) }
+                            )
+                        }
+                    }
+                }
+                
+                Column {
+                    Text(
+                        "Priority",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        listOf("low", "medium", "high", "critical").forEach { pri ->
+                            FilterChip(
+                                selected = priority == pri,
+                                onClick = { priority = pri },
+                                label = { Text(pri.capitalize()) }
+                            )
+                        }
+                    }
+                }
+                
+                // REPEAT PATTERN
+                Column {
+                    Text(
+                        "Repeat Pattern",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        listOf(
+                            "One-time" to null,
+                            "Daily" to "daily",
+                            "Weekly" to "weekly",
+                            "Custom" to "custom"
+                        ).forEach { (label, pattern) ->
+                            FilterChip(
+                                selected = repeatPattern == pattern,
+                                onClick = { repeatPattern = pattern },
+                                label = { Text(label) }
+                            )
+                        }
+                    }
+                    
+                    if (repeatPattern == "custom") {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = repeatIntervalMinutes,
+                            onValueChange = { repeatIntervalMinutes = it.filter { c -> c.isDigit() } },
+                            label = { Text("Repeat every (minutes)") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val validTime = if (selectedTime.length == 5 && isValidTime(selectedTime)) {
+                        selectedTime
+                    } else {
+                        val digitsOnly = selectedTime.filter { it.isDigit() }
+                        when (digitsOnly.length) {
+                            3 -> "${digitsOnly[0]}:${digitsOnly[1]}${digitsOnly[2]}"
+                            4 -> "${digitsOnly.substring(0, 2)}:${digitsOnly.substring(2)}"
+                            else -> selectedTime
+                        }
+                    }
+                    
+                    val scheduledTime = "${selectedDate}T${validTime}:00"
+                    
+                    onUpdate(
+                        CreateReminderRequest(
+                            userId = userId,
+                            title = title,
+                            description = description.ifBlank { null },
+                            scheduledTime = scheduledTime,
+                            category = category,
+                            priority = priority,
+                            repeat_pattern = repeatPattern,
+                            repeatIntervalMinutes = if (repeatPattern == "custom" && repeatIntervalMinutes.isNotBlank()) 
+                                repeatIntervalMinutes.toIntOrNull() else null,
+                            notifyCaregiverOnMiss = notifyCaregiverOnMiss,
+                            escalationThresholdMinutes = if (escalationThresholdMinutes.isNotBlank())
+                                escalationThresholdMinutes.toIntOrNull() ?: 30 else 30
+                        )
+                    )
+                },
+                enabled = title.isNotBlank() && selectedDate.isNotBlank() && selectedTime.isNotBlank() && isValidTime(selectedTime)
+            ) {
+                Text("Update")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 /**

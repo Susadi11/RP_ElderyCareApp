@@ -26,12 +26,14 @@ import com.rp_elderycareapp.data.ChatMessage
 import com.rp_elderycareapp.data.MessageSender
 import com.rp_elderycareapp.data.MessageType
 import com.rp_elderycareapp.ui.theme.AppColors
+import com.rp_elderycareapp.viewmodel.AuthViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 
 @Composable
 fun ChatScreen(
+    authViewModel: AuthViewModel? = null,
     onNavigateBack: () -> Unit = {}
 ) {
     var messages by remember { mutableStateOf(getInitialMessages()) }
@@ -40,6 +42,10 @@ fun ChatScreen(
     var isTyping by remember { mutableStateOf(false) }
     var sessionId by remember { mutableStateOf<String?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    
+    // Get the actual user ID from authViewModel
+    val currentUser = authViewModel?.currentUser?.value
+    val userId = currentUser?.user_id ?: "guest_user"
 
     val chatApi = remember { ChatApi() }
     val listState = rememberLazyListState()
@@ -128,7 +134,7 @@ fun ChatScreen(
 
                         try {
                             val result = chatApi.sendTextMessage(
-                                userId = "user_001", // You can make this dynamic later
+                                userId = userId, // Use actual logged-in user ID
                                 message = messageText,
                                 sessionId = sessionId
                             )
@@ -184,7 +190,7 @@ fun ChatScreen(
 
                                 try {
                                     val result = chatApi.sendVoiceMessage(
-                                        userId = "user_001",
+                                        userId = userId, // Use actual logged-in user ID
                                         audioFilePath = audioFilePath,
                                         sessionId = sessionId
                                     )

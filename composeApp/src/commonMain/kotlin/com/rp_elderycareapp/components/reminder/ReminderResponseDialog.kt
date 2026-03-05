@@ -24,6 +24,7 @@ fun ReminderResponseDialog(
     onDismiss: () -> Unit,
     onSubmitResponse: (String) -> Unit,
     onComplete: (() -> Unit)? = null,  // New callback for completing reminder
+    onSnooze: ((Int) -> Unit)? = null,  // New callback for snoozing reminder
     responseResult: ReminderResponseResult? = null
 ) {
     var responseText by remember { mutableStateOf("") }
@@ -139,7 +140,14 @@ fun ReminderResponseDialog(
                         Spacer(modifier = Modifier.height(8.dp))
                         
                         OutlinedButton(
-                            onClick = { onDismiss() },
+                            onClick = { 
+                                // Snooze for 3 minutes if callback provided
+                                if (onSnooze != null) {
+                                    onSnooze(3)  // 3 minutes snooze
+                                } else {
+                                    onDismiss()
+                                }
+                            },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp)
                         ) {

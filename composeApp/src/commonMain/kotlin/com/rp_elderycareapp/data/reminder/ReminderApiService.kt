@@ -4,11 +4,16 @@ import com.rp_elderycareapp.getApiBaseUrl
 import com.rp_elderycareapp.ApiConfig
 import io.ktor.client.*
 import io.ktor.client.call.*
+import io.ktor.client.plugins.HttpRequestRetry
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 
 
@@ -17,13 +22,26 @@ class ReminderApiService {
     // Using base URL from Constants.kt - automatically configured for emulator/physical device
     private val baseUrl = getApiBaseUrl() + ApiConfig.Endpoints.REMINDERS
     
+    private val json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+        prettyPrint = true
+    }
+
     private val client = HttpClient {
         install(ContentNegotiation) {
-            json(Json {
-                ignoreUnknownKeys = true
-                isLenient = true
-                prettyPrint = true
-            })
+            json(json)
+        }
+        // Transcription can take 15–30 s — keep the socket alive long enough
+        install(HttpTimeout) {
+            requestTimeoutMillis  = 90_000  // 90 s total request time
+            connectTimeoutMillis  = 15_000  // 15 s to establish TCP
+            socketTimeoutMillis   = 90_000  // 90 s idle socket read
+        }
+        // Retry once on connection-level failures (e.g. "Software caused connection abort")
+        install(HttpRequestRetry) {
+            retryOnException(maxRetries = 1, retryOnTimeout = false)
+            delayMillis { 500 }
         }
     }
     
@@ -48,6 +66,10 @@ class ReminderApiService {
                 println("API Response: status=${apiResponse.status}, data=${apiResponse.data}, error=${apiResponse.error}")
                 if (apiResponse.data != null) {
                     Result.success(apiResponse.data)
+                } else if (apiResponse.status == "success") {
+                    // Server created the reminder but did not return the object in "data".
+                    // Signal success with a sentinel so the ViewModel reloads the list.
+                    Result.failure(Exception("__RELOAD__"))
                 } else {
                     Result.failure(Exception(apiResponse.error ?: "No data returned from server"))
                 }
@@ -97,9 +119,26 @@ class ReminderApiService {
                 setBody(buildMultipartFormData(boundary, audioFile, fileName, userId, priority, caregiverIds))
                 contentType(ContentType.parse("multipart/form-data; boundary=$boundary"))
             }
-            
+
             println("Audio upload response status: ${response.status}")
-            val audioResponse: AudioReminderResponse = response.body()
+
+            // Read body as plain text first — this is immune to stream-closed
+            // SocketExceptions that occur when parsing a streaming body directly.
+            val rawBody = try { response.bodyAsText() } catch (e: Exception) {
+                return Result.failure(Exception("Failed to read server response: ${e.message}"))
+            }
+            println("Audio upload raw body: ${rawBody.take(300)}")
+
+            // Surface 4xx/5xx errors with the backend's detail message
+            if (response.status.value !in 200..299) {
+                val detail = try {
+                    json.parseToJsonElement(rawBody).jsonObject["detail"]?.jsonPrimitive?.content
+                        ?: rawBody
+                } catch (_: Exception) { rawBody }
+                return Result.failure(Exception(detail))
+            }
+
+            val audioResponse: AudioReminderResponse = json.decodeFromString(rawBody)
             println("Transcription: ${audioResponse.transcription}")
             Result.success(audioResponse)
         } catch (e: Exception) {
@@ -219,8 +258,34 @@ class ReminderApiService {
                 contentType(ContentType.Application.Json)
                 setBody(request)
             }
-            val apiResponse: ApiResponse<Reminder> = response.body()
-            Result.success(apiResponse.data!!)
+            println("Update response status: ${response.status}")
+            if (response.status.value !in 200..299) {
+                val errorBody = try { response.body<String>() } catch (e: Exception) { "Unknown error" }
+                return Result.failure(Exception("Server error: ${response.status.value} - $errorBody"))
+            }
+            // Try wrapped ApiResponse first
+            val responseText: String = response.body()
+            val json = Json { ignoreUnknownKeys = true; isLenient = true }
+            return try {
+                val apiResponse: ApiResponse<Reminder> = json.decodeFromString(responseText)
+                if (apiResponse.data != null) {
+                    Result.success(apiResponse.data)
+                } else if (apiResponse.status == "success") {
+                    // Server updated but did not echo back — signal a silent success
+                    Result.failure(Exception("__RELOAD__"))
+                } else {
+                    Result.failure(Exception(apiResponse.error ?: "Failed to update reminder"))
+                }
+            } catch (e: Exception) {
+                // Try parsing as direct Reminder
+                try {
+                    val reminder: Reminder = json.decodeFromString(responseText)
+                    Result.success(reminder)
+                } catch (e2: Exception) {
+                    // Can't parse body but HTTP was 2xx — treat as success
+                    Result.failure(Exception("__RELOAD__"))
+                }
+            }
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -230,8 +295,20 @@ class ReminderApiService {
     suspend fun deleteReminder(reminderId: String): Result<String> {
         return try {
             val response = client.delete("$baseUrl/delete/$reminderId")
-            val apiResponse: ApiResponse<String> = response.body()
-            Result.success(apiResponse.message ?: "Deleted successfully")
+            println("Delete response status: ${response.status}")
+            if (response.status.value !in 200..299) {
+                val errorBody = try { response.body<String>() } catch (e: Exception) { "Unknown error" }
+                return Result.failure(Exception("Server error: ${response.status.value} - $errorBody"))
+            }
+            // Any 2xx response = deleted successfully
+            val msg = try {
+                val json = Json { ignoreUnknownKeys = true; isLenient = true }
+                val apiResponse: ApiResponse<String> = json.decodeFromString(response.body())
+                apiResponse.message ?: "Deleted successfully"
+            } catch (e: Exception) {
+                "Deleted successfully"
+            }
+            Result.success(msg)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -373,6 +450,129 @@ class ReminderApiService {
         }
     }
     
+    // 15b. Acknowledge alarm (explicit confirmation - stops alarm and marks as acknowledged)
+    suspend fun acknowledgeReminder(
+        reminderId: String,
+        userId: String,
+        acknowledgmentMethod: String = "tap"
+    ): Result<AcknowledgeAlarmResponse> {
+        return try {
+            println("Acknowledging alarm: $reminderId, method: $acknowledgmentMethod")
+            val response = client.post("$baseUrl/acknowledge/$reminderId") {
+                parameter("user_id", userId)
+                parameter("acknowledgment_method", acknowledgmentMethod)
+            }
+            println("Acknowledge response status: ${response.status}")
+            if (response.status.value !in 200..299) {
+                val errorBody = try { response.bodyAsText() } catch (e: Exception) { "Unknown error" }
+                return Result.failure(Exception("Server error: ${response.status.value} - $errorBody"))
+            }
+            val rawBody = try { response.bodyAsText() } catch (e: Exception) {
+                return Result.failure(Exception("Failed to read acknowledge response: ${e.message}"))
+            }
+            val ackResponse: AcknowledgeAlarmResponse = json.decodeFromString(rawBody)
+            println("Acknowledge success: ${ackResponse.message}")
+            Result.success(ackResponse)
+        } catch (e: Exception) {
+            println("Acknowledge alarm error: ${e.message}")
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+
+    // 16. Stop alarm with response tracking (NEW - replaces complete)
+    suspend fun stopAlarmWithResponse(reminderId: String, userResponse: String): Result<StopAlarmResponse> {
+        return try {
+            println("Stopping alarm with response: $reminderId")
+            val response = client.post("$baseUrl/stop/$reminderId") {
+                parameter("user_response", userResponse)
+            }
+            println("Stop alarm response status: ${response.status}")
+            val stopResponse: StopAlarmResponse = response.body()
+            println("Cognitive risk score: ${stopResponse.cognitiveAnalysis.riskScore}")
+            Result.success(stopResponse)
+        } catch (e: Exception) {
+            println("Stop alarm error: ${e.message}")
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+    
+    // 17. Snooze with behavior tracking (NEW - replaces snoozeReminder)
+    suspend fun snoozeReminderTracked(reminderId: String, delayMinutes: Int = 5): Result<SnoozeTrackedResponse> {
+        return try {
+            println("Snoozing reminder (tracked): $reminderId for $delayMinutes minutes")
+            val response = client.post("$baseUrl/snooze-tracked/$reminderId") {
+                parameter("delay_minutes", delayMinutes)
+            }
+            println("Snooze tracked response status: ${response.status}")
+            val snoozeResponse: SnoozeTrackedResponse = response.body()
+            println("Snooze count this week: ${snoozeResponse.snoozeCountWeek}, rate: ${snoozeResponse.snoozeRate}")
+            println("🔍 SNOOZE NEW SCHEDULED TIME: ${snoozeResponse.newScheduledTime}")
+            println("🔍 SNOOZE REMINDER ID: ${snoozeResponse.reminderId}")
+            Result.success(snoozeResponse)
+        } catch (e: Exception) {
+            println("Snooze tracked error: ${e.message}")
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+    
+    // 18. Request help when confused (NEW)
+    suspend fun requestHelp(reminderId: String, helpReason: String = "confused"): Result<HelpRequestResponse> {
+        return try {
+            println("Requesting help for reminder: $reminderId, reason: $helpReason")
+            val response = client.post("$baseUrl/help-request/$reminderId") {
+                parameter("help_reason", helpReason)
+            }
+            println("Help request response status: ${response.status}")
+            val helpResponse: HelpRequestResponse = response.body()
+            println("Caregiver notified: ${helpResponse.caregiverNotified}, risk score: ${helpResponse.cognitiveRiskScore}")
+            Result.success(helpResponse)
+        } catch (e: Exception) {
+            println("Request help error: ${e.message}")
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+    
+    // 19. Get weekly dementia risk report (NEW)
+    suspend fun getWeeklyDementiaRisk(userId: String, weeks: Int = 4): Result<WeeklyDementiaRiskResponse> {
+        return try {
+            println("Fetching weekly dementia risk for user: $userId, weeks: $weeks")
+            val response = client.get("$baseUrl/weekly-dementia-risk/$userId") {
+                parameter("weeks", weeks)
+            }
+            println("Weekly dementia risk response status: ${response.status}")
+            val riskResponse: WeeklyDementiaRiskResponse = response.body()
+            println("Overall trend: ${riskResponse.overallTrend}, avg risk: ${riskResponse.averageRiskScore}")
+            Result.success(riskResponse)
+        } catch (e: Exception) {
+            println("Get weekly dementia risk error: ${e.message}")
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+    
+    // 20. Mark reminder as missed (called when user ignores alarm after all repeats exhausted)
+    suspend fun markReminderMissed(reminderId: String, userId: String): Result<String> {
+        return try {
+            println("Marking reminder as missed: $reminderId, user: $userId")
+            val response = client.post("$baseUrl/missed/$reminderId") {
+                parameter("user_id", userId)
+            }
+            println("Mark missed response status: ${response.status}")
+            if (response.status.value !in 200..299) {
+                val errorBody = try { response.bodyAsText() } catch (e: Exception) { "Unknown error" }
+                return Result.failure(Exception("Server error: ${response.status.value} - $errorBody"))
+            }
+            Result.success(reminderId)
+        } catch (e: Exception) {
+            println("Mark missed error: ${e.message}")
+            Result.failure(e)
+        }
+    }
+
     fun close() {
         client.close()
     }

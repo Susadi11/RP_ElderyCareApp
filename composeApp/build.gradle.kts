@@ -59,6 +59,9 @@ kotlin {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.clientAndroid)
+            implementation("androidx.credentials:credentials:1.3.0")
+            implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
+            implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -78,6 +81,8 @@ kotlin {
             implementation(libs.ktor.serializationJson)
             implementation(libs.ktor.clientWebsockets)
             implementation(projects.shared)
+            implementation(libs.coil.compose)
+            implementation(libs.coil.network.ktor)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

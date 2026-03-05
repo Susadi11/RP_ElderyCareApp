@@ -16,11 +16,16 @@ import com.rp_elderycareapp.components.BottomNavigationBar
 import com.rp_elderycareapp.navigation.NavRoutes
 import com.rp_elderycareapp.screens.*
 import com.rp_elderycareapp.ui.theme.ElderyCareTheme
+import com.rp_elderycareapp.viewmodel.AuthViewModel
+import androidx.compose.runtime.remember
+import com.rp_elderycareapp.screens.getPreferencesManager
 
 @Composable
 @Preview
 fun App() {
     ElderyCareTheme {
+        val preferencesManager = getPreferencesManager()
+        val authViewModel = remember { AuthViewModel(preferencesManager) }
         val navController = rememberNavController()
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route
@@ -42,14 +47,22 @@ fun App() {
                 }
             }
         ) { innerPadding ->
+            // Dynamic start destination based on authentication state
+            val startDestination = if (authViewModel.isAuthenticated.value) {
+                NavRoutes.HOME.route
+            } else {
+                NavRoutes.LOGIN.route
+            }
+            
             NavHost(
                 navController = navController,
-                startDestination = NavRoutes.LOGIN.route,
+                startDestination = startDestination,
                 modifier = Modifier.fillMaxSize()
             ) {
                 // Authentication Screens
                 composable(NavRoutes.LOGIN.route) {
                     LoginScreen(
+                        authViewModel = authViewModel,
                         onLoginSuccess = {
                             navController.navigate(NavRoutes.HOME.route) {
                                 popUpTo(NavRoutes.LOGIN.route) { inclusive = true }
@@ -59,12 +72,13 @@ fun App() {
                             navController.navigate(NavRoutes.SIGNUP.route)
                         },
                         onForgotPassword = {
-                            // TODO: Implement forgot password flow
+                            navController.navigate(NavRoutes.FORGOT_PASSWORD.route)
                         }
                     )
                 }
                 composable(NavRoutes.SIGNUP.route) {
                     SignupScreen(
+                        authViewModel = authViewModel,
                         onSignupSuccess = {
                             navController.navigate(NavRoutes.HOME.route) {
                                 popUpTo(NavRoutes.SIGNUP.route) { inclusive = true }
@@ -75,11 +89,38 @@ fun App() {
                         }
                     )
                 }
+                composable(NavRoutes.FORGOT_PASSWORD.route) {
+                    ForgotPasswordScreen(
+                        authViewModel = authViewModel,
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToReset = { email ->
+                            navController.navigate("${NavRoutes.RESET_PASSWORD.route}/$email")
+                        }
+                    )
+                }
+                composable("${NavRoutes.RESET_PASSWORD.route}/{email}") { backStackEntry ->
+                    val email = backStackEntry.arguments?.getString("email") ?: ""
+                    ResetPasswordScreen(
+                        authViewModel = authViewModel,
+                        initialEmail = email,
+                        onResetSuccess = {
+                            navController.navigate(NavRoutes.LOGIN.route) {
+                                popUpTo(NavRoutes.FORGOT_PASSWORD.route) { inclusive = true }
+                            }
+                        },
+                        onNavigateToLogin = {
+                            navController.navigate(NavRoutes.LOGIN.route) {
+                                popUpTo(NavRoutes.LOGIN.route) { inclusive = true }
+                            }
+                        }
+                    )
+                }
 
                 // Main App Screens
                 composable(NavRoutes.CHAT.route) {
                     // Chat screen takes full height (no bottom padding)
                     ChatScreen(
+                        authViewModel = authViewModel,
                         onNavigateBack = { navController.popBackStack() }
                     )
                 }
@@ -90,12 +131,16 @@ fun App() {
                 }
                 composable(NavRoutes.HOME.route) {
                     Box(modifier = Modifier.padding(innerPadding)) {
+                        val currentUser = authViewModel.currentUser.value
                         HomeScreen(
+                            userName = currentUser?.full_name ?: "User",
+                            authViewModel = authViewModel,
                             onStartChat = { navController.navigate(NavRoutes.CHAT.route) },
                             onPlayGames = { navController.navigate(NavRoutes.GAME.route) },
                             onTakeMmseTest = { navController.navigate(NavRoutes.MMSE_TEST.route) },
                             onNavigateToProfile = { navController.navigate(NavRoutes.PROFILE.route) },
-                            onNavigateToSettings = { navController.navigate(NavRoutes.SETTINGS.route) }
+                            onNavigateToSettings = { navController.navigate(NavRoutes.SETTINGS.route) },
+                            onNavigateToPatientDetails = { navController.navigate(NavRoutes.PATIENT_DETAILS.route) }
                         )
                     }
                 }
@@ -114,9 +159,18 @@ fun App() {
                         onStartTest = {
                             // ✅ Navigate to questions screen
                             navController.navigate(NavRoutes.MMSE_QUESTIONS.route)
-                        },
-                        onTalkWithUs = {
-                            navController.navigate(NavRoutes.CHAT.route)
+                        }
+                    )
+                }
+
+                composable(NavRoutes.MMSE_RESULTS.route) { backStackEntry ->
+                    val score = backStackEntry.arguments?.getString("score")?.toIntOrNull() ?: 0
+                    MmseResultScreen(
+                        score = score,
+                        onNavigateToHome = {
+                            navController.navigate(NavRoutes.HOME.route) {
+                                popUpTo(NavRoutes.HOME.route) { inclusive = true }
+                            }
                         }
                     )
                 }
@@ -125,9 +179,9 @@ fun App() {
                         onNavigateBack = {
                             navController.popBackStack()
                         },
-//                        onTalkWithUs = {
-//                            navController.navigate(NavRoutes.CHAT.route)
-//                        }
+                        onComplete = { score ->
+                            navController.navigate("mmse_results/$score")
+                        }
                     )
                 }
 
@@ -154,12 +208,19 @@ fun App() {
                         onNavigateBack = { navController.popBackStack() }
                     )
                 }
+                composable(NavRoutes.PATIENT_DETAILS.route) {
+                    PatientDetailsScreen(
+                        viewModel = authViewModel,
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
                 composable(NavRoutes.PROFILE.route) {
                     // Profile screen takes full height (no bottom padding)
                     ProfileScreen(
+                        authViewModel = authViewModel,
                         onNavigateBack = { navController.popBackStack() },
                         onLogout = {
-                            // Navigate back to login and clear backstack
+              // Navigate back to login and clear backstack
                             navController.navigate(NavRoutes.LOGIN.route) {
                                 popUpTo(0) { inclusive = true }
                             }

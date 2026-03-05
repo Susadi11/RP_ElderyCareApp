@@ -61,34 +61,43 @@ class AlarmService(private val context: Context) {
     }
     
     /**
-     * Play alarm sound using system default alarm or notification sound
+     * Play alarm sound using system default alarm or notification sound.
+     * Uses prepareAsync() so it never blocks the main thread and won't
+     * throw on emulators that have a missing/null alarm URI.
      */
     private fun playAlarmSound() {
         try {
-            // Stop any currently playing alarm
             stopAlarmSound()
-            
-            // Get default alarm sound URI
-            val alarmUri: Uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-            
-            // Create and configure MediaPlayer
-            mediaPlayer = MediaPlayer().apply {
-                setDataSource(context, alarmUri)
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .setUsage(AudioAttributes.USAGE_ALARM)
-                        .build()
-                )
-                isLooping = true // Keep playing until stopped
-                prepare()
-                start()
+
+            // Build a fallback chain so we always get a valid URI
+            val alarmUri: Uri =
+                RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                    ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+                    ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+
+            val mp = MediaPlayer()
+            mp.setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .setUsage(AudioAttributes.USAGE_ALARM)
+                    .build()
+            )
+            mp.setDataSource(context, alarmUri)
+            mp.isLooping = true
+            mp.setOnPreparedListener { player ->
+                player.start()
+                println("=== 🎵 Alarm music started ===")
             }
-            
-            println("=== 🎵 Alarm music started ===")
+            mp.setOnErrorListener { player, what, extra ->
+                println("=== MediaPlayer error: what=$what extra=$extra ===")
+                player.release()
+                mediaPlayer = null
+                true
+            }
+            mp.prepareAsync()   // non-blocking – safe on all Android versions
+            mediaPlayer = mp
         } catch (e: Exception) {
-            println("=== Error playing alarm sound: ${e.message} ===")
+            println("=== Error setting up alarm sound: ${e.message} ===")
             e.printStackTrace()
         }
     }

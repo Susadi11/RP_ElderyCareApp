@@ -29,14 +29,16 @@ import kotlinx.datetime.Clock
  * - Pulsing alarm icon animation
  * - Large text for elderly users
  * - Reminder details display
- * - Snooze and Complete buttons
+ * - Stop Alarm (with response tracking), Snooze, and Need Help options
  */
 @Composable
 fun AlarmDialog(
     reminder: Reminder,
+    repeatCount: Int = 0,
     onDismiss: () -> Unit,
     onSnooze: (Int) -> Unit,
-    onComplete: () -> Unit
+    onStopAlarm: () -> Unit,  // NEW: Opens response dialog
+    onNeedHelp: () -> Unit    // NEW: Request help when confused
 ) {
     // Pulsing animation for the alarm icon
     val infiniteTransition = rememberInfiniteTransition()
@@ -78,6 +80,22 @@ fun AlarmDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
+                // Repeat count badge — only visible on repeated alarms
+                if (repeatCount > 0) {
+                    Surface(
+                        color = Color(0xFFB91C1C),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = "🔁 REPEAT #$repeatCount",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
+                        )
+                    }
+                }
+
                 // Pulsing alarm icon
                 Icon(
                     imageVector = Icons.Default.Alarm,
@@ -184,44 +202,40 @@ fun AlarmDialog(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Complete button
+                    // Stop Alarm button (replaces "Mark as Complete")
                     Button(
-                        onClick = {
-                            onComplete()
-                            onDismiss()
-                        },
+                        onClick = onStopAlarm,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(60.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF10B981)
+                            containerColor = Color(0xFF4CAF50)  // Green
                         ),
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Icon(
                             Icons.Default.CheckCircle,
-                            contentDescription = "Complete",
+                            contentDescription = "Stop Alarm",
                             modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = "Mark as Complete",
+                            text = "✅ STOP ALARM",
                             fontSize = 20.sp,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
                     
-                    // Snooze button
+                    // Snooze button - 3 minutes
                     Button(
                         onClick = {
-                            onSnooze(15) // Snooze for 15 minutes
-                            onDismiss()
+                            onSnooze(3)  // 3 minutes snooze
                         },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(60.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF3B82F6)
+                            containerColor = Color(0xFF2196F3)  // Blue
                         ),
                         shape = RoundedCornerShape(16.dp)
                     ) {
@@ -232,36 +246,28 @@ fun AlarmDialog(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = "Snooze (15 min)",
+                            text = "⏰ SNOOZE (3 MIN)",
                             fontSize = 20.sp,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
                     
-                    // Dismiss button
-                    OutlinedButton(
-                        onClick = onDismiss,
+                    // Need Help link (NOT a button - just text)
+                    TextButton(
+                        onClick = onNeedHelp,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(60.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = Color.White
-                        ),
-                        border = ButtonDefaults.outlinedButtonBorder.copy(
-                            brush = Brush.linearGradient(colors = listOf(Color.White, Color.White))
-                        ),
-                        shape = RoundedCornerShape(16.dp)
+                            .height(48.dp)
                     ) {
-                        Icon(
-                            Icons.Default.Close,
-                            contentDescription = "Dismiss",
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = "Dismiss",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Medium
+                            text = "Need Help? Tap here",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = Color(0xFFF44336),  // Red
+                            textAlign = TextAlign.Center,
+                            style = LocalTextStyle.current.copy(
+                                textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
+                            )
                         )
                     }
                 }

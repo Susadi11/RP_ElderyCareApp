@@ -52,9 +52,9 @@ actual fun LoginLockIcon() {
 
 @Composable
 actual fun GoogleSignInButton(onIdTokenReceived: (String) -> Unit, isLoading: Boolean) {
-    // iOS: Google Sign-In not yet implemented - show disabled button
+    // JVM/Desktop: Google Sign-In not available - show disabled button
     OutlinedButton(
-        onClick = { /* Not available on iOS yet */ },
+        onClick = { /* Not available on Desktop */ },
         modifier = Modifier
             .fillMaxWidth()
             .height(56.dp),
@@ -91,7 +91,7 @@ actual fun GoogleSignInButton(onIdTokenReceived: (String) -> Unit, isLoading: Bo
             }
             Spacer(modifier = Modifier.width(12.dp))
             Text(
-                text = "Sign in with Google (Coming Soon)",
+                text = "Sign in with Google (Desktop not supported)",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 letterSpacing = 0.25.sp
