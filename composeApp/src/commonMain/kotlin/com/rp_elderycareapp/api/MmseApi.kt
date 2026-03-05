@@ -8,7 +8,15 @@ import io.ktor.client.request.forms.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+
+@Serializable
+data class MMSEFinalizeResponse(
+    val total_score: Float,
+    val ml_risk_label: String,
+    val avg_ml_probability: Float
+)
 
 class MmseApi {
     private val baseUrl = getApiBaseUrl()
@@ -92,6 +100,33 @@ class MmseApi {
             } else {
                 val errorBody = response.body<String>()
                 Result.failure(Exception("Upload failed: ${response.status} - $errorBody"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun finalizeMmse(assessmentId: String, userId: String): Result<MMSEFinalizeResponse> {
+        return try {
+            val url = "$baseUrl/api/mmse/finalize"
+
+            println("--- FINALIZING MMSE ---")
+            println("URL: $url")
+            println("Assessment ID: $assessmentId")
+            println("User ID: $userId")
+            println("-----------------------")
+
+            val response = httpClient.post(url) {
+                parameter("assessment_id", assessmentId)
+                parameter("user_id", userId)
+            }
+
+            if (response.status.isSuccess()) {
+                val body = response.body<MMSEFinalizeResponse>()
+                Result.success(body)
+            } else {
+                val errorBody = response.body<String>()
+                Result.failure(Exception("Finalize MMSE failed: ${response.status} - $errorBody"))
             }
         } catch (e: Exception) {
             Result.failure(e)
