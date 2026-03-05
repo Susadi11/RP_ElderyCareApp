@@ -165,8 +165,15 @@ fun App() {
 
                 composable(NavRoutes.MMSE_RESULTS.route) { backStackEntry ->
                     val score = backStackEntry.arguments?.getString("score")?.toIntOrNull() ?: 0
+                    val riskLabel = backStackEntry.arguments?.getString("riskLabel")
+                    val probability = backStackEntry.arguments?.getString("probability")?.toFloatOrNull()
+                    val maxScore = com.rp_elderycareapp.data.MmseQuestions.allQuestions.sumOf { it.maxPoints }
+                    
                     MmseResultScreen(
                         score = score,
+                        maxScore = maxScore,
+                        mlRiskLabel = riskLabel,
+                        mlProbability = probability,
                         onNavigateToHome = {
                             navController.navigate(NavRoutes.HOME.route) {
                                 popUpTo(NavRoutes.HOME.route) { inclusive = true }
@@ -191,7 +198,10 @@ fun App() {
                                     val finalizeData = result.getOrNull()
                                     // Use server's total score if available, fallback to local score
                                     val finalScore = finalizeData?.total_score?.toInt() ?: score
-                                    navController.navigate("mmse_results/$finalScore")
+                                    val riskLabel = finalizeData?.ml_risk_label ?: ""
+                                    val probability = finalizeData?.avg_ml_probability ?: 0f
+                                    
+                                    navController.navigate("mmse_results/$finalScore?riskLabel=$riskLabel&probability=$probability")
                                 } else {
                                     println("Finalize MMSE error: ${result.exceptionOrNull()?.message}")
                                     // Navigate anyway so the user sees results

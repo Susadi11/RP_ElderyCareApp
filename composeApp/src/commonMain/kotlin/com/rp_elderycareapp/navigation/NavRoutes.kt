@@ -13,7 +13,7 @@ enum class NavRoutes(val route: String) {
     MMSE_QUESTIONS("mmse_questions/{userId}/{assessmentId}"),
     MMSE_START_TEST("mmse_start_test"),
 
-    MMSE_RESULTS("mmse_results/{score}"),
+    MMSE_RESULTS("mmse_results/{score}?riskLabel={riskLabel}&probability={probability}"),
     REMINDER("reminder"),
     PATIENT_DASHBOARD("patient_dashboard"),
     CAREGIVER_ALERTS("caregiver_alerts"),
