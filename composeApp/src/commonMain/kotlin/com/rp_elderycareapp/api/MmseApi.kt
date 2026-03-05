@@ -19,6 +19,12 @@ data class MMSEFinalizeResponse(
 )
 
 @Serializable
+data class MlSummary(
+    val avg_probability: Float? = null,
+    val ml_risk_label: String? = null
+)
+
+@Serializable
 data class MmseAssessment(
     val _id: String,
     val user_id: String,
@@ -26,7 +32,8 @@ data class MmseAssessment(
     val assessment_date: String,
     val total_score: Float,
     val status: String,
-    val completed_at: String? = null
+    val completed_at: String? = null,
+    val ml_summary: MlSummary? = null
 )
 
 @Serializable

@@ -9,8 +9,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.TrendingUp
-import androidx.compose.material.icons.filled.Psychology
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -113,6 +112,35 @@ fun MmseTestScreen(
                 }
             } else {
                 MmseScoreGraph(scores = assessments)
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                // History Title
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Detailed History",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF1A1A2E)
+                    )
+                    Text(
+                        text = "${assessments.size} tests",
+                        fontSize = 14.sp,
+                        color = Color(0xFF6B7280)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Assessment Cards
+                assessments.forEach { assessment ->
+                    AssessmentHistoryItem(assessment = assessment)
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
             }
 
             // Extra bottom spacing for better scrolling experience
@@ -215,11 +243,145 @@ private fun MmseTestCard(alpha: Float, onStartAssessmentClick: () -> Unit) {
 }
 
 @Composable
+private fun AssessmentHistoryItem(assessment: MmseAssessment) {
+    val scorePercentage = assessment.total_score / 30f
+    val scoreColor = when {
+        scorePercentage >= 0.8f -> Color(0xFF10B981) // Green for good
+        scorePercentage >= 0.6f -> Color(0xFFF59E0B) // Yellow for fair
+        else -> Color(0xFFEF4444) // Red for poor
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 6.dp,
+                shape = RoundedCornerShape(20.dp),
+                ambientColor = Color.Black.copy(alpha = 0.05f)
+            ),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Score Circle
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .background(
+                        color = scoreColor.copy(alpha = 0.1f),
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = assessment.total_score.toInt().toString(),
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = scoreColor
+                )
+            }
+
+            Spacer(modifier = Modifier.width(20.dp))
+
+            // Info
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Assessment Score",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF1A1A2E)
+                )
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.CalendarMonth,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = Color(0xFF6B7280)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = formatDate(assessment.assessment_date),
+                        fontSize = 13.sp,
+                        color = Color(0xFF6B7280)
+                    )
+                }
+            }
+
+            // Risk Label if available
+            assessment.ml_summary?.ml_risk_label?.let { label ->
+                Box(
+                    modifier = Modifier
+                        .background(
+                            color = if (label == "Control") Color(0xFFE0F2F1) else Color(0xFFFFEBEE),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = label,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (label == "Control") Color(0xFF00796B) else Color(0xFFC62828)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = Color(0xFFD1D5DB)
+            )
+        }
+    }
+}
+
+private fun formatDate(dateStr: String): String {
+    // Simple formatter for ISO string: 2026-03-05T17:10:25.992000
+    return try {
+        val parts = dateStr.split("T")[0].split("-")
+        val year = parts[0]
+        val month = when (parts[1]) {
+            "01" -> "Jan"
+            "02" -> "Feb"
+            "03" -> "Mar"
+            "04" -> "Apr"
+            "05" -> "May"
+            "06" -> "Jun"
+            "07" -> "Jul"
+            "08" -> "Aug"
+            "09" -> "Sep"
+            "10" -> "Oct"
+            "11" -> "Nov"
+            "12" -> "Dec"
+            else -> parts[1]
+        }
+        val day = parts[2]
+        "$month $day, $year"
+    } catch (e: Exception) {
+        dateStr
+    }
+}
+
+@Composable
 fun MmseScoreGraph(scores: List<MmseAssessment>) {
+    // The graph should show progress over time (oldest to newest)
+    val chronologicalScores = scores.sortedBy { it.assessment_date }
     val maxScore = 30
     val animationProgress = remember { Animatable(0f) }
 
-    LaunchedEffect(scores) {
+    LaunchedEffect(chronologicalScores) {
         animationProgress.animateTo(
             targetValue = 1f,
             animationSpec = tween(durationMillis = 1500, easing = FastOutSlowInEasing)
@@ -259,7 +421,7 @@ fun MmseScoreGraph(scores: List<MmseAssessment>) {
                         color = Color(0xFF1A1A2E)
                     )
                     Text(
-                        text = if (scores.isEmpty()) "No assessment history found" else "Recent assessment trends",
+                        text = if (chronologicalScores.isEmpty()) "No assessment history found" else "Recent assessment trends",
                         fontSize = 14.sp,
                         color = Color(0xFF6B7280)
                     )
@@ -274,17 +436,17 @@ fun MmseScoreGraph(scores: List<MmseAssessment>) {
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            if (scores.size < 2) {
+            if (chronologicalScores.size < 2) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(200.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (scores.size == 1) {
+                    if (chronologicalScores.size == 1) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = "Score: ${scores[0].total_score.toInt()}",
+                                text = "Score: ${chronologicalScores[0].total_score.toInt()}",
                                 fontSize = 32.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF4A9FFF)
@@ -293,7 +455,7 @@ fun MmseScoreGraph(scores: List<MmseAssessment>) {
                                 text = "Need at least 2 sessions for trend",
                                 fontSize = 14.sp,
                                 color = Color(0xFF6B7280)
-                            )
+                    )
                         }
                     } else {
                         Text(
@@ -326,8 +488,8 @@ fun MmseScoreGraph(scores: List<MmseAssessment>) {
                             )
                         }
 
-                        val spacing = width / (scores.size - 1)
-                        val points = scores.mapIndexed { index, assessment ->
+                        val spacing = width / (chronologicalScores.size - 1)
+                        val points = chronologicalScores.mapIndexed { index, assessment ->
                             val x = index * spacing
                             val targetY = height - (assessment.total_score / maxScore) * height
                             // Animate from bottom to targetY
@@ -396,12 +558,12 @@ fun MmseScoreGraph(scores: List<MmseAssessment>) {
             Spacer(modifier = Modifier.height(16.dp))
 
             // X-axis labels
-            if (scores.isNotEmpty()) {
+            if (chronologicalScores.isNotEmpty()) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    scores.forEachIndexed { index, _ ->
+                    chronologicalScores.forEachIndexed { index, _ ->
                         Text(
                             text = "S${index + 1}",
                             fontSize = 11.sp,

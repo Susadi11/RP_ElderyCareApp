@@ -26,11 +26,10 @@ class MmseViewModel {
                 }
                 
                 result.onSuccess { response ->
-                    // Filter for completed assessments and sort by date
-                    // Take the last 6 for the graph if needed, or all
+                    // Filter for completed assessments and sort by date, newest first
                     mmseScores.value = response.assessments
                         .filter { it.status == "completed" }
-                        .sortedBy { it.assessment_date }
+                        .sortedByDescending { it.assessment_date }
                 }.onFailure { error ->
                     errorMessage.value = error.message ?: "Failed to fetch assessments"
                     println("MmseViewModel: Error fetching assessments: ${error.message}")
