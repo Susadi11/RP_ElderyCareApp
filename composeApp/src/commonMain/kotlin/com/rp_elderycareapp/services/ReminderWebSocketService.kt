@@ -1,5 +1,6 @@
 package com.rp_elderycareapp.services
 
+import com.rp_elderycareapp.data.reminder.AlarmEvent
 import com.rp_elderycareapp.data.reminder.Reminder
 import com.rp_elderycareapp.data.reminder.WebSocketMessage
 import com.rp_elderycareapp.getApiBaseUrl
@@ -27,6 +28,18 @@ class ReminderWebSocketService(
     
     private val _reminderAlarms = MutableSharedFlow<Reminder>()
     val reminderAlarms: SharedFlow<Reminder> = _reminderAlarms.asSharedFlow()
+
+    /** Emits when a repeat alarm fires. Carries repeat count and reminder id. */
+    private val _alarmRepeat = MutableSharedFlow<AlarmEvent>()
+    val alarmRepeat: SharedFlow<AlarmEvent> = _alarmRepeat.asSharedFlow()
+
+    /** Emits when backend confirms the alarm was acknowledged. */
+    private val _alarmAcknowledged = MutableSharedFlow<AlarmEvent>()
+    val alarmAcknowledged: SharedFlow<AlarmEvent> = _alarmAcknowledged.asSharedFlow()
+
+    /** Emits when the backend marks a reminder as missed (after max repeats). */
+    private val _alarmMissed = MutableSharedFlow<AlarmEvent>()
+    val alarmMissed: SharedFlow<AlarmEvent> = _alarmMissed.asSharedFlow()
     
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
@@ -104,9 +117,44 @@ class ReminderWebSocketService(
             when (wsMessage.type) {
                 "reminder" -> {
                     // Parse the reminder from the data field
-                    val reminder = json.decodeFromString<Reminder>(wsMessage.data)
+                    val reminder = json.decodeFromString<Reminder>(wsMessage.data ?: return)
                     println("=== 🔔 ALARM: ${reminder.title} at ${reminder.scheduledTime} ===")
                     _reminderAlarms.emit(reminder)
+                }
+                "reminder_repeat" -> {
+                    val reminderId = wsMessage.reminderId ?: return
+                    val repeatCount = wsMessage.repeatCount ?: 1
+                    println("=== 🔁 REPEAT ALARM #$repeatCount for $reminderId ===")
+                    _alarmRepeat.emit(
+                        AlarmEvent(
+                            type = "reminder_repeat",
+                            reminderId = reminderId,
+                            repeatCount = repeatCount,
+                            message = wsMessage.message
+                        )
+                    )
+                }
+                "alarm_acknowledged" -> {
+                    val reminderId = wsMessage.reminderId ?: return
+                    println("=== ✅ ALARM ACKNOWLEDGED: $reminderId ===")
+                    _alarmAcknowledged.emit(
+                        AlarmEvent(
+                            type = "alarm_acknowledged",
+                            reminderId = reminderId,
+                            message = wsMessage.message
+                        )
+                    )
+                }
+                "alarm_missed" -> {
+                    val reminderId = wsMessage.reminderId ?: return
+                    println("=== ⚠️ ALARM MISSED: $reminderId ===")
+                    _alarmMissed.emit(
+                        AlarmEvent(
+                            type = "alarm_missed",
+                            reminderId = reminderId,
+                            message = wsMessage.message
+                        )
+                    )
                 }
                 "alert" -> {
                     println("=== Alert received ===")

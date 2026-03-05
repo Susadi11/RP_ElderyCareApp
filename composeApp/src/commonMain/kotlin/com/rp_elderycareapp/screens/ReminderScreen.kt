@@ -43,6 +43,8 @@ fun ReminderScreen() {
     val scope = rememberCoroutineScope()
     
     val activeAlarm by viewModel.activeAlarm.collectAsState()
+    val alarmRepeatCount by viewModel.alarmRepeatCount.collectAsState()
+    val missedAlarmMessage by viewModel.missedAlarmMessage.collectAsState()
     
     var selectedTab by remember { mutableStateOf(0) }
     var showCreateDialog by remember { mutableStateOf(false) }
@@ -52,10 +54,18 @@ fun ReminderScreen() {
     var showAudioRecorderDialog by remember { mutableStateOf(false) }
     var showAlarmResponseDialog by remember { mutableStateOf(false) }
     var reminderForResponse by remember { mutableStateOf<Reminder?>(null) }
+    var showMissedAlarmDialog by remember { mutableStateOf(false) }
     
     LaunchedEffect(Unit) {
         viewModel.loadReminders(userId)
         viewModel.initWebSocket(userId)  // Initialize WebSocket for real-time alarms
+    }
+
+    // Show missed alarm dialog whenever the ViewModel signals a missed event
+    LaunchedEffect(missedAlarmMessage) {
+        if (missedAlarmMessage != null) {
+            showMissedAlarmDialog = true
+        }
     }
     
     DisposableEffect(Unit) {
@@ -307,6 +317,7 @@ fun ReminderScreen() {
         if (activeAlarm != null) {
             AlarmDialog(
                 reminder = activeAlarm!!,
+                repeatCount = alarmRepeatCount,
                 onDismiss = {
                     // Removed dismiss functionality (no data tracking)
                     // User must interact with alarm via Stop, Snooze, or Need Help
@@ -340,6 +351,7 @@ fun ReminderScreen() {
         }
         
         // Response dialog - shown after clicking "Stop Alarm"
+        // User writes what they did → confirmed → acknowledgeReminder is called
         if (showAlarmResponseDialog && reminderForResponse != null) {
             AlarmResponseDialog(
                 reminder = reminderForResponse!!,
@@ -354,12 +366,18 @@ fun ReminderScreen() {
                     reminderForResponse = null
                     if (reminderId != null) {
                         scope.launch {
+                            // First acknowledge the alarm (stops it at backend level)
+                            viewModel.acknowledgeReminder(
+                                reminderId = reminderId,
+                                userId = userId,
+                                acknowledgmentMethod = "tap"
+                            )
+                            // Then record cognitive response for dementia tracking
                             viewModel.stopAlarmWithResponse(
                                 reminderId,
                                 userId,
                                 userResponse
                             ) { response ->
-                                // Navigate to Active tab after alarm is stopped
                                 selectedTab = 0
                                 if (response.cognitiveAnalysis.riskScore > 0.7) {
                                     println("⚠️ High cognitive risk detected - caregiver notified")
@@ -372,6 +390,50 @@ fun ReminderScreen() {
                                 }
                             }
                         }
+                    }
+                }
+            )
+        }
+
+        // Missed alarm dialog — shown when backend escalates and marks reminder as missed
+        if (showMissedAlarmDialog && missedAlarmMessage != null) {
+            AlertDialog(
+                onDismissRequest = {
+                    showMissedAlarmDialog = false
+                    viewModel.clearMissedAlarmMessage()
+                    selectedTab = 0
+                },
+                icon = {
+                    Icon(
+                        Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = Color(0xFFDC2626),
+                        modifier = Modifier.size(36.dp)
+                    )
+                },
+                title = {
+                    Text(
+                        "Missed Reminder",
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFDC2626)
+                    )
+                },
+                text = {
+                    Text(
+                        missedAlarmMessage!!,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showMissedAlarmDialog = false
+                            viewModel.clearMissedAlarmMessage()
+                            selectedTab = 0
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626))
+                    ) {
+                        Text("OK")
                     }
                 }
             )

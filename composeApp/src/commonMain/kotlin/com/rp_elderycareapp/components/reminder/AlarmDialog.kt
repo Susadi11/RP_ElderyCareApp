@@ -34,6 +34,7 @@ import kotlinx.datetime.Clock
 @Composable
 fun AlarmDialog(
     reminder: Reminder,
+    repeatCount: Int = 0,
     onDismiss: () -> Unit,
     onSnooze: (Int) -> Unit,
     onStopAlarm: () -> Unit,  // NEW: Opens response dialog
@@ -79,6 +80,22 @@ fun AlarmDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
+                // Repeat count badge — only visible on repeated alarms
+                if (repeatCount > 0) {
+                    Surface(
+                        color = Color(0xFFB91C1C),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = "🔁 REPEAT #$repeatCount",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
+                        )
+                    }
+                }
+
                 // Pulsing alarm icon
                 Icon(
                     imageVector = Icons.Default.Alarm,

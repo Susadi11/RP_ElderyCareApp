@@ -249,8 +249,30 @@ data class ApiResponse<T>(
 // WebSocket message types
 @Serializable
 data class WebSocketMessage(
-    val type: String,  // "reminder", "alert", "update"
-    val data: String   // JSON string of reminder or alert
+    val type: String,  // "reminder", "reminder_repeat", "alarm_acknowledged", "alarm_missed", "alert", "update"
+    val data: String? = null,              // JSON string of reminder or alert (used by "reminder" type)
+    @SerialName("reminder_id") val reminderId: String? = null,
+    val title: String? = null,
+    val message: String? = null,
+    @SerialName("repeat_count") val repeatCount: Int? = null,
+    val urgency: String? = null,
+    val timestamp: String? = null
+)
+
+// Alarm acknowledge response from backend
+@Serializable
+data class AcknowledgeAlarmResponse(
+    val status: String,
+    val message: String,
+    @SerialName("reminder_id") val reminderId: String? = null
+)
+
+// Represents an alarm-related event broadcast from the WebSocket layer
+data class AlarmEvent(
+    val type: String,          // "reminder_repeat", "alarm_acknowledged", "alarm_missed"
+    val reminderId: String,
+    val repeatCount: Int = 0,
+    val message: String? = null
 )
 
 // Due now response for polling

@@ -450,6 +450,36 @@ class ReminderApiService {
         }
     }
     
+    // 15b. Acknowledge alarm (explicit confirmation - stops alarm and marks as acknowledged)
+    suspend fun acknowledgeReminder(
+        reminderId: String,
+        userId: String,
+        acknowledgmentMethod: String = "tap"
+    ): Result<AcknowledgeAlarmResponse> {
+        return try {
+            println("Acknowledging alarm: $reminderId, method: $acknowledgmentMethod")
+            val response = client.post("$baseUrl/acknowledge/$reminderId") {
+                parameter("user_id", userId)
+                parameter("acknowledgment_method", acknowledgmentMethod)
+            }
+            println("Acknowledge response status: ${response.status}")
+            if (response.status.value !in 200..299) {
+                val errorBody = try { response.bodyAsText() } catch (e: Exception) { "Unknown error" }
+                return Result.failure(Exception("Server error: ${response.status.value} - $errorBody"))
+            }
+            val rawBody = try { response.bodyAsText() } catch (e: Exception) {
+                return Result.failure(Exception("Failed to read acknowledge response: ${e.message}"))
+            }
+            val ackResponse: AcknowledgeAlarmResponse = json.decodeFromString(rawBody)
+            println("Acknowledge success: ${ackResponse.message}")
+            Result.success(ackResponse)
+        } catch (e: Exception) {
+            println("Acknowledge alarm error: ${e.message}")
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+
     // 16. Stop alarm with response tracking (NEW - replaces complete)
     suspend fun stopAlarmWithResponse(reminderId: String, userResponse: String): Result<StopAlarmResponse> {
         return try {
@@ -524,6 +554,25 @@ class ReminderApiService {
         }
     }
     
+    // 20. Mark reminder as missed (called when user ignores alarm after all repeats exhausted)
+    suspend fun markReminderMissed(reminderId: String, userId: String): Result<String> {
+        return try {
+            println("Marking reminder as missed: $reminderId, user: $userId")
+            val response = client.post("$baseUrl/missed/$reminderId") {
+                parameter("user_id", userId)
+            }
+            println("Mark missed response status: ${response.status}")
+            if (response.status.value !in 200..299) {
+                val errorBody = try { response.bodyAsText() } catch (e: Exception) { "Unknown error" }
+                return Result.failure(Exception("Server error: ${response.status.value} - $errorBody"))
+            }
+            Result.success(reminderId)
+        } catch (e: Exception) {
+            println("Mark missed error: ${e.message}")
+            Result.failure(e)
+        }
+    }
+
     fun close() {
         client.close()
     }
