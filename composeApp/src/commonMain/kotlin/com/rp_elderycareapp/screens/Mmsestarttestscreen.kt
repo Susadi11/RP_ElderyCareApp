@@ -34,7 +34,6 @@ fun MmseStartTestScreen(
     authViewModel: AuthViewModel,
     onNavigateBack: () -> Unit = {},
     onStartTest: (assessmentId: String) -> Unit = {},
-    onTalkWithUs: () -> Unit = {}
 ) {
     // Animation for entrance
     val offsetY = remember { Animatable(50f) }

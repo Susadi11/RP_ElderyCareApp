@@ -1,6 +1,7 @@
 package com.rp_elderycareapp.screens
 
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -8,7 +9,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material3.*
@@ -16,10 +16,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -80,9 +79,6 @@ fun MmseTestScreen(
             MmseTestCard(alpha = alpha.value, onStartAssessmentClick = onStartAssessmentClick)
 
             Spacer(modifier = Modifier.height(32.dp))
-
-
-            Spacer(modifier = Modifier.height(16.dp))
 
             MmseScoreGraph(scores = dummyMmseScores)
 
@@ -198,6 +194,16 @@ val dummyMmseScores = listOf(
 
 @Composable
 fun MmseScoreGraph(scores: List<MmseScore>) {
+    val maxScore = 30
+    val animationProgress = remember { Animatable(0f) }
+
+    LaunchedEffect(scores) {
+        animationProgress.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(durationMillis = 1500, easing = FastOutSlowInEasing)
+        )
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -215,67 +221,144 @@ fun MmseScoreGraph(scores: List<MmseScore>) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = "MMSE Score History",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF1A1A2E)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
             Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "MMSE Score History",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF1A1A2E)
+                    )
+                    Text(
+                        text = "Recent assessment trends",
+                        fontSize = 14.sp,
+                        color = Color(0xFF6B7280)
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Default.TrendingUp,
+                    contentDescription = null,
+                    tint = Color(0xFF4A9FFF),
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(200.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.Bottom
+                    .height(200.dp)
             ) {
-                val maxScore = 30
-                // Y-axis labels
-                Column(
-                    modifier = Modifier.padding(end = 8.dp),
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(text = "30", fontSize = 12.sp, color = Color(0xFF6B7280))
-                    Text(text = "15", fontSize = 12.sp, color = Color(0xFF6B7280))
-                    Text(text = "0", fontSize = 12.sp, color = Color(0xFF6B7280))
-                }
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val width = size.width
+                    val height = size.height
+                    
+                    // Grid lines (Horizontal)
+                    val gridLines = 5
+                    for (i in 0..gridLines) {
+                        val y = height - (i.toFloat() / gridLines) * height
+                        drawLine(
+                            color = Color(0xFFF1F5F9),
+                            start = Offset(0f, y),
+                            end = Offset(width, y),
+                            strokeWidth = 1.dp.toPx()
+                        )
+                    }
 
-                scores.forEach { score ->
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Bottom,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth(0.6f)
-                                .height(((score.score.toFloat() / maxScore) * 150).dp)
-                                .background(
-                                    color = Color(0xFF4A9FFF),
-                                    shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
+                    if (scores.size >= 2) {
+                        val spacing = width / (scores.size - 1)
+                        val points = scores.mapIndexed { index, score ->
+                            val x = index * spacing
+                            val targetY = height - (score.score.toFloat() / maxScore) * height
+                            // Animate from bottom to targetY
+                            val y = height - (height - targetY) * animationProgress.value
+                            Offset(x, y)
+                        }
+
+                        val path = Path().apply {
+                            moveTo(points.first().x, points.first().y)
+                            for (i in 1 until points.size) {
+                                val prev = points[i - 1]
+                                val curr = points[i]
+                                // Smooth curve calculation
+                                val cp1 = Offset(prev.x + (curr.x - prev.x) / 2f, prev.y)
+                                val cp2 = Offset(prev.x + (curr.x - prev.x) / 2f, curr.y)
+                                cubicTo(cp1.x, cp1.y, cp2.x, cp2.y, curr.x, curr.y)
+                            }
+                        }
+
+                        // Gradient Fill
+                        val fillPath = Path().apply {
+                            addPath(path)
+                            lineTo(points.last().x, height)
+                            lineTo(points.first().x, height)
+                            close()
+                        }
+                        
+                        drawPath(
+                            path = fillPath,
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color(0xFF4A9FFF).copy(alpha = 0.2f),
+                                    Color(0xFF4A9FFF).copy(alpha = 0.0f)
                                 )
+                            )
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = score.session.toString(),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color(0xFF6B7280)
+
+                        // Main Line
+                        drawPath(
+                            path = path,
+                            color = Color(0xFF4A9FFF),
+                            style = Stroke(
+                                width = 3.dp.toPx(),
+                                cap = StrokeCap.Round,
+                                join = StrokeJoin.Round
+                            )
                         )
+
+                        // Data Points
+                        points.forEach { point ->
+                            drawCircle(
+                                color = Color.White,
+                                radius = 6.dp.toPx(),
+                                center = point
+                            )
+                            drawCircle(
+                                color = Color(0xFF4A9FFF),
+                                radius = 4.dp.toPx(),
+                                center = point
+                            )
+                        }
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Session",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF1A1A2E)
-            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // X-axis labels
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                scores.forEach { score ->
+                    Text(
+                        text = "S${score.session}",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF94A3B8),
+                        modifier = Modifier.width(32.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
         }
     }
 }
