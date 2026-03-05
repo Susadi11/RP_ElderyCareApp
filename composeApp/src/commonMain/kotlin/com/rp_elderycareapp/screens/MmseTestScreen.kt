@@ -28,7 +28,6 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun MmseTestScreen(
-    onNavigateToScoreTrend: () -> Unit = {},
     onStartAssessmentClick: () -> Unit = {}
 ) {
     // Animation for entrance
@@ -74,33 +73,14 @@ fun MmseTestScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Logo Section
-            LogoSection(alpha = alpha.value)
 
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Text(
-                text = "Comprehensive cognitive health\nassessment and monitoring",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Normal,
-                color = Color(0xFF6B7280),
-                textAlign = TextAlign.Center,
-                lineHeight = 24.sp
-            )
-
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(38.dp))
 
             // Main Test Card
             MmseTestCard(alpha = alpha.value, onStartAssessmentClick = onStartAssessmentClick)
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Bottom Navigation Buttons
-            BottomNavigationSection(
-                alpha = alpha.value,
-                onHealthTrackingClick = onNavigateToScoreTrend
-            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -112,32 +92,6 @@ fun MmseTestScreen(
     }
 }
 
-@Composable
-private fun LogoSection(alpha: Float) {
-    Box(
-        modifier = Modifier
-            .size(100.dp)
-            .shadow(
-                elevation = 8.dp,
-                shape = CircleShape,
-                ambientColor = Color(0xFF4A9FFF).copy(alpha = 0.3f),
-                spotColor = Color(0xFF4A9FFF).copy(alpha = 0.3f)
-            )
-            .background(
-                color = Color(0xFFB8DCF5),
-                shape = CircleShape
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "logo",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF4A9FFF),
-            modifier = Modifier.graphicsLayer { this.alpha = alpha }
-        )
-    }
-}
 
 @Composable
 private fun MmseTestCard(alpha: Float, onStartAssessmentClick: () -> Unit) {
@@ -226,120 +180,6 @@ private fun MmseTestCard(alpha: Float, onStartAssessmentClick: () -> Unit) {
                     fontWeight = FontWeight.SemiBold,
                     color = Color.White
                 )
-            }
-        }
-    }
-}
-
-@Composable
-private fun BottomNavigationSection(
-    alpha: Float,
-    onHealthTrackingClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .graphicsLayer { this.alpha = alpha },
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        // Health Tracking Button with Gradient and Animation
-        EnhancedHealthTrackingButton(
-            modifier = Modifier.weight(1f),
-            onClick = onHealthTrackingClick
-        )
-    }
-}
-
-@Composable
-private fun EnhancedHealthTrackingButton(
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    // Pulsing animation for the button
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val scale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.02f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1500, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "scale"
-    )
-
-    Button(
-        onClick = onClick,
-        modifier = modifier
-            .height(72.dp)
-            .shadow(
-                elevation = 8.dp,
-                shape = RoundedCornerShape(20.dp),
-                ambientColor = Color(0xFF4ECCA3).copy(alpha = 0.5f),
-                spotColor = Color(0xFF4ECCA3).copy(alpha = 0.5f)
-            )
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            },
-        shape = RoundedCornerShape(20.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = Color.Transparent
-        ),
-        contentPadding = PaddingValues(0.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    brush = Brush.horizontalGradient(
-                        colors = listOf(
-                            Color(0xFF1A1A2E),
-                            Color(0xFF16213E)
-                        )
-                    )
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Trending icon with glow effect
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .background(
-                            color = Color(0xFF4ECCA3).copy(alpha = 0.2f),
-                            shape = CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.TrendingUp,
-                        contentDescription = "Health Tracking",
-                        modifier = Modifier.size(20.dp),
-                        tint = Color(0xFF4ECCA3)
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                Column(
-                    horizontalAlignment = Alignment.Start
-                ) {
-                    Text(
-                        text = "Health Tracking",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Text(
-                        text = "View Trends",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Normal,
-                        color = Color(0xFF4ECCA3)
-                    )
-                }
             }
         }
     }
@@ -440,48 +280,3 @@ fun MmseScoreGraph(scores: List<MmseScore>) {
     }
 }
 
-@Composable
-private fun BottomNavButton(
-    icon: ImageVector,
-    label: String,
-    backgroundColor: Color,
-    iconColor: Color,
-    textColor: Color = Color(0xFF1A1A2E),
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    Button(
-        onClick = onClick,
-        modifier = modifier
-            .height(72.dp)
-            .shadow(
-                elevation = 4.dp,
-                shape = RoundedCornerShape(20.dp)
-            ),
-        shape = RoundedCornerShape(20.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = backgroundColor
-        ),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                modifier = Modifier.size(28.dp),
-                tint = iconColor
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = label,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
-                color = textColor,
-                textAlign = TextAlign.Center
-            )
-        }
-    }
-}

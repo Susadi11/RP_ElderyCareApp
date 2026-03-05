@@ -104,10 +104,7 @@ fun MmseStartTestScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
-                // Logo Section
-                LogoSection()
-
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(22.dp))
 
                 // Title
                 Text(
@@ -194,7 +191,7 @@ fun MmseStartTestScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "20 questions",
+                        text = "15 questions",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
                         color = Color(0xFF9CA3AF)
@@ -204,31 +201,6 @@ fun MmseStartTestScreen(
                 Spacer(modifier = Modifier.height(20.dp))
             }
         }
-    }
-}
-
-@Composable
-private fun LogoSection() {
-    Box(
-        modifier = Modifier
-            .size(100.dp)
-            .shadow(
-                elevation = 8.dp,
-                shape = CircleShape,
-                ambientColor = Color(0xFF4A9FFF).copy(alpha = 0.3f)
-            )
-            .background(
-                color = Color(0xFFD4E9F7),
-                shape = CircleShape
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "logo",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF4A9FFF)
-        )
     }
 }
 
