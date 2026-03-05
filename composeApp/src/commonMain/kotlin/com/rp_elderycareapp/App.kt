@@ -219,7 +219,8 @@ fun App() {
 
                 composable(NavRoutes.REMINDER.route) {
                     Box(modifier = Modifier.padding(innerPadding)) {
-                        ReminderScreen()
+                        val userId = authViewModel.currentUser.value?.user_id ?: "unknown_user"
+                        ReminderScreen(userId = userId)
                     }
                 }
                 composable(NavRoutes.PATIENT_DASHBOARD.route) {

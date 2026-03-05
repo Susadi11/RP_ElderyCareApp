@@ -35,11 +35,10 @@ import kotlinx.datetime.toLocalDateTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReminderScreen() {
+fun ReminderScreen(userId: String) {
     val alarmManager = rememberPlatformAlarmManager()
     val audioRecorder = rememberAudioRecorder()
     val viewModel = remember { ReminderViewModel(alarmManager) }
-    val userId = "patient_001" 
     val scope = rememberCoroutineScope()
     
     val activeAlarm by viewModel.activeAlarm.collectAsState()

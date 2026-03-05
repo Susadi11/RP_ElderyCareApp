@@ -189,15 +189,17 @@ class ReminderViewModel(private val alarmManager: PlatformAlarmManager? = null) 
             val result = apiService.getUserReminders(userId, actualFilter)
             result
                 .onSuccess { allReminders ->
+                    // Safety filter: render only reminders for the requested user.
+                    val userScopedReminders = allReminders.filter { it.userId == userId }
                     // Filter client-side for active tab to include both active and snoozed
                     val reminders = if (statusFilter == "active") {
-                        allReminders.filter { it.status.lowercase() == "active" || it.status.lowercase() == "snoozed" }
+                        userScopedReminders.filter { it.status.lowercase() == "active" || it.status.lowercase() == "snoozed" }
                     } else if (statusFilter == "completed") {
-                        allReminders.filter { it.status.lowercase() == "completed" }
+                        userScopedReminders.filter { it.status.lowercase() == "completed" }
                     } else {
-                        allReminders
+                        userScopedReminders
                     }
-                    println("=== LOAD SUCCESS: Got ${reminders.size} reminders (${allReminders.size} total) ===")
+                    println("=== LOAD SUCCESS: Got ${reminders.size} reminders (${userScopedReminders.size} user-scoped, ${allReminders.size} total) ===")
                     reminderState = if (reminders.isEmpty()) {
                         ReminderUiState.Success(emptyList())
                     } else {
