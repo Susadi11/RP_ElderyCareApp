@@ -257,6 +257,16 @@ fun MmseQuestionsScreen(
                                         "Naming" -> "name_objects"
                                         "Repetition" -> "repeat_sentence"
                                         "Attention" -> "spell_world"
+                                        "Year" -> "year"
+                                        "Month" -> "month"
+                                        "Date" -> "date"
+                                        "Day" -> "day"
+                                        "Season" -> "season"
+                                        "Country" -> "country"
+                                        "Province" -> "province"
+                                        "City" -> "city"
+                                        "Building" -> "building"
+                                        "Floor" -> "floor"
                                         else -> currentQuestion.category
                                     }
 
