@@ -23,15 +23,15 @@ object MmseQuestions {
         MmseQuestion(
             id = 1,
             question = "What year is this?",
-            category = "Orientation - Time",
+            category = "Naming",
             maxPoints = 1,
             instructions = "Accept exact answer only",
-            timeLimit = 10
+            timeLimit = 10,
         ),
         MmseQuestion(
             id = 2,
             question = "What season is this?",
-            category = "Orientation - Time",
+            category = "Naming",
             maxPoints = 1,
             instructions = "Accept either last week of old season or first week of new season",
             timeLimit = 10,
@@ -40,33 +40,33 @@ object MmseQuestions {
         MmseQuestion(
             id = 3,
             question = "What month is this?",
-            category = "Orientation - Time",
+            category = "Naming",
             maxPoints = 1,
             instructions = "Accept either first day of new month or last day of previous month",
-            timeLimit = 10
+            timeLimit = 10,
         ),
         MmseQuestion(
             id = 4,
             question = "What is today's date?",
-            category = "Orientation - Time",
+            category = "Naming",
             maxPoints = 1,
             instructions = "Accept previous or next date",
-            timeLimit = 10
+            timeLimit = 10,
         ),
         MmseQuestion(
             id = 5,
             question = "What day of the week is this?",
-            category = "Orientation - Time",
+            category = "Naming",
             maxPoints = 1,
             instructions = "Accept exact answer only",
-            timeLimit = 10
+            timeLimit = 10,
         ),
 
         // ORIENTATION TO PLACE (5 points total)
         MmseQuestion(
             id = 6,
             question = "What country are we in?",
-            category = "Orientation - Place",
+            category = "Naming",
             maxPoints = 1,
             instructions = "Accept exact answer only",
             timeLimit = 10,
@@ -75,7 +75,7 @@ object MmseQuestions {
         MmseQuestion(
             id = 7,
             question = "What province are we in?",
-            category = "Orientation - Place",
+            category = "Naming",
             maxPoints = 1,
             instructions = "Accept exact answer only",
             timeLimit = 10,
@@ -84,7 +84,7 @@ object MmseQuestions {
         MmseQuestion(
             id = 8,
             question = "What city or town are we in?",
-            category = "Orientation - Place",
+            category = "Naming",
             maxPoints = 1,
             instructions = "Accept exact answer only",
             timeLimit = 10,
@@ -93,7 +93,7 @@ object MmseQuestions {
         MmseQuestion(
             id = 9,
             question = "What is the name of this building?",
-            category = "Orientation - Place",
+            category = "Naming",
             maxPoints = 1,
             instructions = "In home: street address. In facility: building name",
             timeLimit = 10,
@@ -102,7 +102,7 @@ object MmseQuestions {
         MmseQuestion(
             id = 10,
             question = "What floor of the building are we on?",
-            category = "Orientation - Place",
+            category = "Naming",
             maxPoints = 1,
             instructions = "In home: what room. In facility: what floor",
             timeLimit = 10,
@@ -146,7 +146,7 @@ object MmseQuestions {
             category = "Naming",
             maxPoints = 1,
             instructions = "Accept 'wristwatch' or 'watch'. Do not accept 'clock' or 'time'",
-            timeLimit = 10
+            timeLimit = 10,
         ),
         MmseQuestion(
             id = 15,
@@ -168,48 +168,48 @@ object MmseQuestions {
         ),
 
         // READING (1 point total)
-        MmseQuestion(
-            id = 17,
-            question = "Read the words on this page and then do what it says: CLOSE YOUR EYES",
-            category = "Reading",
-            maxPoints = 1,
-            instructions = "Score 1 only if subject closes eyes. Does not need to read aloud.",
-            timeLimit = 10,
-            requiresCaregiverEvaluation = true
-        ),
+//        MmseQuestion(
+//            id = 17,
+//            question = "Read the words on this page and then do what it says: CLOSE YOUR EYES",
+//            category = "Reading",
+//            maxPoints = 1,
+//            instructions = "Score 1 only if subject closes eyes. Does not need to read aloud.",
+//            timeLimit = 10,
+//            requiresCaregiverEvaluation = true
+//        ),
 
         // WRITING (1 point total)
-        MmseQuestion(
-            id = 18,
-            question = "Write any complete sentence on the paper.",
-            category = "Writing",
-            maxPoints = 1,
-            instructions = "Sentence must make sense. Ignore spelling errors.",
-            timeLimit = 30,
-            requiresCaregiverEvaluation = true
-        ),
+//        MmseQuestion(
+//            id = 18,
+//            question = "Write any complete sentence on the paper.",
+//            category = "Writing",
+//            maxPoints = 1,
+//            instructions = "Sentence must make sense. Ignore spelling errors.",
+//            timeLimit = 30,
+//            requiresCaregiverEvaluation = true
+//        ),
 
         // DRAWING (1 point total)
-        MmseQuestion(
-            id = 19,
-            question = "Copy this design please. (Two five-sided figures intersecting to make a four-sided figure)",
-            category = "Drawing",
-            maxPoints = 1,
-            instructions = "Must draw a four-sided figure between two five-sided figures",
-            timeLimit = 60,
-            requiresCaregiverEvaluation = true
-        ),
+//        MmseQuestion(
+//            id = 19,
+//            question = "Copy this design please. (Two five-sided figures intersecting to make a four-sided figure)",
+//            category = "Drawing",
+//            maxPoints = 1,
+//            instructions = "Must draw a four-sided figure between two five-sided figures",
+//            timeLimit = 60,
+//            requiresCaregiverEvaluation = true
+//        ),
 
         // THREE-STAGE COMMAND (3 points total)
-        MmseQuestion(
-            id = 20,
-            question = "Take this paper in your right hand, fold the paper in half once with both hands, and put the paper down on the floor.",
-            category = "Command",
-            maxPoints = 3,
-            instructions = "Score 1 for each: takes paper correctly, folds in half, puts on floor",
-            timeLimit = 30,
-            requiresCaregiverEvaluation = true
-        )
+//        MmseQuestion(
+//            id = 20,
+//            question = "Take this paper in your right hand, fold the paper in half once with both hands, and put the paper down on the floor.",
+//            category = "Command",
+//            maxPoints = 3,
+//            instructions = "Score 1 for each: takes paper correctly, folds in half, puts on floor",
+//            timeLimit = 30,
+//            requiresCaregiverEvaluation = true
+//        )
     )
 }
 

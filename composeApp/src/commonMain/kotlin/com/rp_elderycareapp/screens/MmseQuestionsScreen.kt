@@ -30,11 +30,15 @@ import com.rp_elderycareapp.data.MmseQuestion
 import com.rp_elderycareapp.data.MmseQuestions
 import com.rp_elderycareapp.platform.loadImageResource
 import com.rp_elderycareapp.platform.rememberTextToSpeech
+import com.rp_elderycareapp.platform.rememberAudioRecorder
+import com.rp_elderycareapp.platform.rememberVoicePermission
+import com.rp_elderycareapp.api.MmseApi
+import com.rp_elderycareapp.api.readAudioFile
 import kotlinx.coroutines.launch
 
 enum class RecordingState {
     IDLE,
-    LISTENING,
+    RECORDING,
     RECORDED
 }
 
@@ -48,23 +52,48 @@ enum class EvaluationStatus {
 @Composable
 fun MmseQuestionsScreen(
     onNavigateBack: () -> Unit = {},
-//    onTalkWithUs: () -> Unit = {},
+    userId: String = "USER-SUSA-0-7077", // Default for demo
+    assessmentId: String = "69a1bdd2988ad8fa563fbef0",
     onComplete: (totalScore: Int) -> Unit = {}
 ) {
     val questions = remember { MmseQuestions.allQuestions }
+    val scope = rememberCoroutineScope()
+    val mmseApi = remember { MmseApi() }
 
     var currentQuestionIndex by remember { mutableStateOf(0) }
     var recordingState by remember { mutableStateOf(RecordingState.IDLE) }
-    var recordedAnswer by remember { mutableStateOf("") }
     var currentScore by remember { mutableStateOf(0) }
     var evaluationStatus by remember { mutableStateOf(EvaluationStatus.PENDING) }
     var pointsEarned by remember { mutableStateOf(0) }
+    var isSubmitting by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
 
     val textToSpeech = rememberTextToSpeech()
+    val audioRecorder = rememberAudioRecorder()
+    val isRecording by audioRecorder.isRecording.collectAsState()
+    val recordedFilePath by audioRecorder.outputFilePath.collectAsState()
+    
+    val voicePermission = rememberVoicePermission()
 
     val offsetY = remember { Animatable(50f) }
     val alpha = remember { Animatable(0f) }
+
+    // Handle permission result
+    LaunchedEffect(voicePermission.hasPermission) {
+        if (voicePermission.hasPermission && recordingState == RecordingState.IDLE) {
+            // Permission granted, but we wait for user tap to start recording
+        }
+    }
+
+    // Sync recordingState with audioRecorder
+    LaunchedEffect(isRecording) {
+        if (isRecording) {
+            recordingState = RecordingState.RECORDING
+        } else if (recordingState == RecordingState.RECORDING) {
+            recordingState = RecordingState.RECORDED
+        }
+    }
+
     LaunchedEffect(currentQuestionIndex) {
         pointsEarned = 0
         evaluationStatus = EvaluationStatus.PENDING
@@ -110,14 +139,6 @@ fun MmseQuestionsScreen(
                 )
             ),
         containerColor = Color.Transparent,
-//        topBar = {
-//            TopAppBar(
-//                title = { },
-//                colors = TopAppBarDefaults.topAppBarColors(
-//                    containerColor = Color.Transparent
-//                )
-//            )
-//        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -140,7 +161,8 @@ fun MmseQuestionsScreen(
             QuestionCardWithImage(
                 question = currentQuestion,
                 questionIndex = currentQuestionIndex,
-                recordedAnswer = if (recordingState == RecordingState.RECORDED) recordedAnswer else null,
+                recordedAnswer = if (recordingState == RecordingState.RECORDED) "Audio Recorded" else null,
+                isListening = recordingState == RecordingState.RECORDING,
                 onPlayAudio = playQuestionAudio
             )
 
@@ -150,22 +172,16 @@ fun MmseQuestionsScreen(
                 recordingState = recordingState,
                 onClick = {
                     when (recordingState) {
-                        RecordingState.IDLE -> {
-                            recordingState = RecordingState.LISTENING
-                            // TODO: Start actual voice recording
-                            kotlinx.coroutines.GlobalScope.launch {
-                                kotlinx.coroutines.delay(2000)
-                                recordedAnswer = "watch" // Replace with actual transcription
-                                recordingState = RecordingState.RECORDED
+                        RecordingState.IDLE, RecordingState.RECORDED -> {
+                            if (voicePermission.hasPermission) {
+                                val fileName = "question_${currentQuestionIndex}.wav"
+                                audioRecorder.startRecording(fileName)
+                            } else {
+                                voicePermission.request()
                             }
                         }
-                        RecordingState.LISTENING -> {
-                            recordingState = RecordingState.RECORDED
-                            recordedAnswer = "watch"
-                        }
-                        RecordingState.RECORDED -> {
-                            recordingState = RecordingState.LISTENING
-                            recordedAnswer = ""
+                        RecordingState.RECORDING -> {
+                            audioRecorder.stopRecording()
                         }
                     }
                 }
@@ -216,25 +232,68 @@ fun MmseQuestionsScreen(
 
             if ((currentQuestion.requiresCaregiverEvaluation && evaluationStatus != EvaluationStatus.PENDING) ||
                 (!currentQuestion.requiresCaregiverEvaluation && recordingState == RecordingState.RECORDED)) {
-                SubmitAnswerButton(
-                    onClick = {
-                        val score = if (currentQuestion.requiresCaregiverEvaluation) {
-                            pointsEarned
-                        } else {
-                            1 // TODO: Calculate actual score for voice answers
-                        }
-                        currentScore += score
+                
+                if (isSubmitting) {
+                    CircularProgressIndicator()
+                } else {
+                    SubmitAnswerButton(
+                        onClick = {
+                            scope.launch {
+                                isSubmitting = true
+                                val filePath = recordedFilePath
+                                if (filePath != null) {
+                                    val audioBytes = readAudioFile(filePath)
+                                    val fileName = "question_${currentQuestionIndex}.wav"
+                                    
+                                    val caregiverIsCorrect = if (currentQuestion.requiresCaregiverEvaluation) {
+                                        evaluationStatus == EvaluationStatus.CORRECT
+                                    } else {
+                                        null
+                                    }
 
-                        if (currentQuestionIndex < questions.size - 1) {
-                            currentQuestionIndex++
-                            recordingState = RecordingState.IDLE
-                            recordedAnswer = ""
-                            evaluationStatus = EvaluationStatus.PENDING
-                        } else {
-                            onComplete(currentScore)
+                                    val backendQuestionType = when (currentQuestion.category) {
+                                        "Registration" -> "repeat_words"
+                                        "Recall" -> "recall_words"
+                                        "Naming" -> "name_objects"
+                                        "Repetition" -> "repeat_sentence"
+                                        "Attention" -> "spell_world"
+                                        else -> currentQuestion.category
+                                    }
+
+                                    val result = mmseApi.submitMmse(
+                                        assessmentId = assessmentId,
+                                        userId = userId,
+                                        questionType = backendQuestionType,
+                                        caregiverIsCorrect = caregiverIsCorrect,
+                                        audioBytes = audioBytes,
+                                        fileName = fileName
+                                    )
+                                    
+                                    if (result.isSuccess) {
+                                        val score = if (currentQuestion.requiresCaregiverEvaluation) {
+                                            pointsEarned
+                                        } else {
+                                            1 // Placeholder for server-side evaluation
+                                        }
+                                        currentScore += score
+
+                                        if (currentQuestionIndex < questions.size - 1) {
+                                            currentQuestionIndex++
+                                            recordingState = RecordingState.IDLE
+                                            evaluationStatus = EvaluationStatus.PENDING
+                                        } else {
+                                            onComplete(currentScore)
+                                        }
+                                    } else {
+                                        // Handle error (e.g., show snackbar)
+                                        println("MMSE Upload Error: ${result.exceptionOrNull()?.message}")
+                                    }
+                                }
+                                isSubmitting = false
+                            }
                         }
-                    }
-                )
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(12.dp))
             }
@@ -242,10 +301,6 @@ fun MmseQuestionsScreen(
             RepeatQuestionButton(
                 onClick = playQuestionAudio
             )
-
-//            Spacer(modifier = Modifier.height(24.dp))
-
-//            TalkWithUsButton(onClick = onTalkWithUs)
 
             Spacer(modifier = Modifier.height(20.dp))
         }
@@ -322,6 +377,7 @@ private fun QuestionCardWithImage(
     question: MmseQuestion,
     questionIndex: Int,
     recordedAnswer: String?,
+    isListening: Boolean,
     onPlayAudio: () -> Unit
 ) {
     Card(
@@ -389,7 +445,7 @@ private fun QuestionCardWithImage(
                 }
             }
 
-            if (recordedAnswer != null) {
+            if (recordedAnswer != null || isListening) {
                 Spacer(modifier = Modifier.height(20.dp))
 
                 Card(
@@ -401,14 +457,14 @@ private fun QuestionCardWithImage(
                         ),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFFD1FAE5)
+                        containerColor = if (isListening) Color(0xFFEFF6FF) else Color(0xFFD1FAE5)
                     )
                 ) {
                     Text(
-                        text = "\"$recordedAnswer\"",
+                        text = if (isListening && recordedAnswer.isNullOrEmpty()) "Say something..." else "\"${recordedAnswer ?: ""}\"",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Color(0xFF065F46),
+                        color = if (isListening) Color(0xFF1E40AF) else Color(0xFF065F46),
                         textAlign = TextAlign.Center,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -506,7 +562,7 @@ private fun MicrophoneButton(
 
     val scale by infiniteTransition.animateFloat(
         initialValue = 1f,
-        targetValue = if (recordingState == RecordingState.LISTENING) 1.1f else 1f,
+        targetValue = if (recordingState == RecordingState.RECORDING) 1.1f else 1f,
         animationSpec = infiniteRepeatable(
             animation = tween(800, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
@@ -516,19 +572,19 @@ private fun MicrophoneButton(
 
     val buttonColor = when (recordingState) {
         RecordingState.IDLE -> Color(0xFF10B981)
-        RecordingState.LISTENING -> Color(0xFFEF4444)
+        RecordingState.RECORDING -> Color(0xFFEF4444)
         RecordingState.RECORDED -> Color(0xFF10B981)
     }
 
     val buttonBackground = when (recordingState) {
         RecordingState.IDLE -> Color(0xFFD1FAE5)
-        RecordingState.LISTENING -> Color(0xFFFEE2E2)
+        RecordingState.RECORDING -> Color(0xFFFEE2E2)
         RecordingState.RECORDED -> Color(0xFFD1FAE5)
     }
 
     val statusText = when (recordingState) {
         RecordingState.IDLE -> "Tap to Answer"
-        RecordingState.LISTENING -> "Listening..."
+        RecordingState.RECORDING -> "Listening..."
         RecordingState.RECORDED -> "Tap to Re-record"
     }
 

@@ -27,11 +27,13 @@ import kotlinx.coroutines.launch
 @Composable
 fun MmseResultScreen(
     score: Int,
+    mlRiskLabel: String? = null,
+    mlProbability: Float? = null,
     maxScore: Int = 30,
     onNavigateToHome: () -> Unit = {},
     onViewDetails: () -> Unit = {}
 ) {
-    // Determine risk level based on score
+    // Determine risk level based on score (MMSE standard)
     val (riskLevel, riskColor, riskEmoji) = when {
         score >= 26 -> Triple("Normal", Color(0xFF10B981), "🎉")
         score >= 20 -> Triple("Mild", Color(0xFFFBBF24), "⚠️")
@@ -344,6 +346,99 @@ fun MmseResultScreen(
                         ScoreCategoryItem("10-19", "Moderate", score in 10..19)
                         Spacer(modifier = Modifier.height(12.dp))
                         ScoreCategoryItem("0-9", "Severe", score in 0..9)
+                    }
+                }
+            }
+
+            // AI Assessment Card
+            if (mlRiskLabel != null) {
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .shadow(
+                                elevation = 10.dp,
+                                shape = RoundedCornerShape(24.dp)
+                            ),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color(0xFFEFF6FF)
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AutoAwesome,
+                                    contentDescription = "AI Risk",
+                                    tint = Color(0xFF3B82F6),
+                                    modifier = Modifier.size(28.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = "AI Voice Analysis",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF1E40AF)
+                                )
+                            }
+                            
+                            Spacer(modifier = Modifier.height(16.dp))
+                            
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(
+                                        text = "Detection",
+                                        fontSize = 14.sp,
+                                        color = Color(0xFF1E40AF).copy(alpha = 0.7f)
+                                    )
+                                    Text(
+                                        text = mlRiskLabel,
+                                        fontSize = 20.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (mlRiskLabel.contains("Dementia", ignoreCase = true)) Color(0xFFEF4444) else Color(0xFF10B981)
+                                    )
+                                }
+                                
+                                if (mlProbability != null) {
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        Text(
+                                            text = "Confidence",
+                                            fontSize = 14.sp,
+                                            color = Color(0xFF1E40AF).copy(alpha = 0.7f)
+                                        )
+                                        Text(
+                                            text = "${(mlProbability * 100).toInt()}%",
+                                            fontSize = 20.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF1E40AF)
+                                        )
+                                    }
+                                }
+                            }
+                            
+                            if (mlProbability != null) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                LinearProgressIndicator(
+                                    progress = mlProbability,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(8.dp),
+                                    color = Color(0xFF3B82F6),
+                                    trackColor = Color(0xFFDBEAFE),
+                                    strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+                                )
+                            }
+                        }
                     }
                 }
             }

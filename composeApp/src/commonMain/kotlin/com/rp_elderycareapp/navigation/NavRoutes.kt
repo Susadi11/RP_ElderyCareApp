@@ -10,10 +10,10 @@ enum class NavRoutes(val route: String) {
     GAME("game"),
     MMSE_TEST("mmse_test"),
 
-    MMSE_QUESTIONS("mmse_questions"),
+    MMSE_QUESTIONS("mmse_questions/{userId}/{assessmentId}"),
     MMSE_START_TEST("mmse_start_test"),
 
-    MMSE_RESULTS("mmse_results/{score}"),
+    MMSE_RESULTS("mmse_results/{score}?riskLabel={riskLabel}&probability={probability}"),
     REMINDER("reminder"),
     PATIENT_DASHBOARD("patient_dashboard"),
     CAREGIVER_ALERTS("caregiver_alerts"),

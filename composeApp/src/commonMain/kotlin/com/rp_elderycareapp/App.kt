@@ -19,6 +19,7 @@ import com.rp_elderycareapp.ui.theme.ElderyCareTheme
 import com.rp_elderycareapp.viewmodel.AuthViewModel
 import androidx.compose.runtime.remember
 import com.rp_elderycareapp.screens.getPreferencesManager
+import kotlinx.coroutines.launch
 
 @Composable
 @Preview
@@ -29,6 +30,8 @@ fun App() {
         val navController = rememberNavController()
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route
+        val mmseApi = remember { com.rp_elderycareapp.api.MmseApi() }
+        val scope = androidx.compose.runtime.rememberCoroutineScope()
         
         // Hide bottom bar on auth screens, chat, settings, profile, and reminder dashboard screens
         val showBottomBar = currentRoute != NavRoutes.LOGIN.route &&
@@ -153,20 +156,29 @@ fun App() {
                 }
                 composable(NavRoutes.MMSE_START_TEST.route) {
                     MmseStartTestScreen(
+                        authViewModel = authViewModel,
                         onNavigateBack = {
                             navController.popBackStack()
                         },
-                        onStartTest = {
-                            // ✅ Navigate to questions screen
-                            navController.navigate(NavRoutes.MMSE_QUESTIONS.route)
+                        onStartTest = { assessmentId ->
+                            // ✅ Navigate to questions screen with assessmentId and userId
+                            val userId = authViewModel.currentUser.value?.user_id ?: "USER-SUSADI-24-F71B"
+                            navController.navigate("mmse_questions/$userId/$assessmentId")
                         }
                     )
                 }
 
                 composable(NavRoutes.MMSE_RESULTS.route) { backStackEntry ->
                     val score = backStackEntry.arguments?.getString("score")?.toIntOrNull() ?: 0
+                    val riskLabel = backStackEntry.arguments?.getString("riskLabel")
+                    val probability = backStackEntry.arguments?.getString("probability")?.toFloatOrNull()
+                    val maxScore = com.rp_elderycareapp.data.MmseQuestions.allQuestions.sumOf { it.maxPoints }
+                    
                     MmseResultScreen(
                         score = score,
+                        maxScore = maxScore,
+                        mlRiskLabel = riskLabel,
+                        mlProbability = probability,
                         onNavigateToHome = {
                             navController.navigate(NavRoutes.HOME.route) {
                                 popUpTo(NavRoutes.HOME.route) { inclusive = true }
@@ -174,13 +186,33 @@ fun App() {
                         }
                     )
                 }
-                composable(NavRoutes.MMSE_QUESTIONS.route) {
+                composable("mmse_questions/{userId}/{assessmentId}") { backStackEntry ->
+                    val userId = backStackEntry.arguments?.getString("userId") ?: "unknown_user"
+                    val assessmentId = backStackEntry.arguments?.getString("assessmentId") ?: ""
                     MmseQuestionsScreen(
+                        userId = userId,
+                        assessmentId = assessmentId,
                         onNavigateBack = {
                             navController.popBackStack()
                         },
                         onComplete = { score ->
-                            navController.navigate("mmse_results/$score")
+                            // ✅ Hit finalize endpoint when assessment completes
+                            scope.launch {
+                                val result = mmseApi.finalizeMmse(assessmentId, userId)
+                                if (result.isSuccess) {
+                                    val finalizeData = result.getOrNull()
+                                    // Use server's total score if available, fallback to local score
+                                    val finalScore = finalizeData?.total_score?.toInt() ?: score
+                                    val riskLabel = finalizeData?.ml_risk_label ?: ""
+                                    val probability = finalizeData?.avg_ml_probability ?: 0f
+                                    
+                                    navController.navigate("mmse_results/$finalScore?riskLabel=$riskLabel&probability=$probability")
+                                } else {
+                                    println("Finalize MMSE error: ${result.exceptionOrNull()?.message}")
+                                    // Navigate anyway so the user sees results
+                                    navController.navigate("mmse_results/$score")
+                                }
+                            }
                         }
                     )
                 }
