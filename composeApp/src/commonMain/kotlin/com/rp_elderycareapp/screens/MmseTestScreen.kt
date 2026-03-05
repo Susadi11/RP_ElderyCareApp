@@ -23,10 +23,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.rp_elderycareapp.api.MmseAssessment
+import com.rp_elderycareapp.viewmodel.MmseViewModel
 import kotlinx.coroutines.launch
 
 @Composable
 fun MmseTestScreen(
+    userId: String,
+    viewModel: MmseViewModel = remember { MmseViewModel() },
     onStartAssessmentClick: () -> Unit = {}
 ) {
     // Animation for entrance
@@ -36,7 +40,15 @@ fun MmseTestScreen(
     // Scroll state for making the content scrollable
     val scrollState = rememberScrollState()
 
-    LaunchedEffect(Unit) {
+    val assessments by viewModel.mmseScores
+    val isLoading by viewModel.isLoading
+    val errorMessage by viewModel.errorMessage
+
+    LaunchedEffect(userId) {
+        if (userId.isNotEmpty()) {
+            viewModel.fetchMmseAssessments(userId)
+        }
+        
         launch {
             offsetY.animateTo(
                 targetValue = 0f,
@@ -66,11 +78,11 @@ fun MmseTestScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(scrollState) // Makes the content scrollable
+                .verticalScroll(scrollState)
                 .padding(24.dp)
                 .offset(y = offsetY.value.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.Top
         ) {
 
             Spacer(modifier = Modifier.height(38.dp))
@@ -80,7 +92,28 @@ fun MmseTestScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            MmseScoreGraph(scores = dummyMmseScores)
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = Color(0xFF4A9FFF))
+                }
+            } else if (errorMessage != null) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = errorMessage ?: "Unknown error",
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(16.dp),
+                        textAlign = TextAlign.Center
+                    )
+                    Button(
+                        onClick = { viewModel.fetchMmseAssessments(userId) },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4A9FFF))
+                    ) {
+                        Text("Retry")
+                    }
+                }
+            } else {
+                MmseScoreGraph(scores = assessments)
+            }
 
             // Extra bottom spacing for better scrolling experience
             Spacer(modifier = Modifier.height(24.dp))
@@ -181,19 +214,8 @@ private fun MmseTestCard(alpha: Float, onStartAssessmentClick: () -> Unit) {
     }
 }
 
-data class MmseScore(val session: Int, val score: Int)
-
-val dummyMmseScores = listOf(
-    MmseScore(1, 28),
-    MmseScore(2, 26),
-    MmseScore(3, 27),
-    MmseScore(4, 25),
-    MmseScore(5, 26),
-    MmseScore(6, 24)
-)
-
 @Composable
-fun MmseScoreGraph(scores: List<MmseScore>) {
+fun MmseScoreGraph(scores: List<MmseAssessment>) {
     val maxScore = 30
     val animationProgress = remember { Animatable(0f) }
 
@@ -237,7 +259,7 @@ fun MmseScoreGraph(scores: List<MmseScore>) {
                         color = Color(0xFF1A1A2E)
                     )
                     Text(
-                        text = "Recent assessment trends",
+                        text = if (scores.isEmpty()) "No assessment history found" else "Recent assessment trends",
                         fontSize = 14.sp,
                         color = Color(0xFF6B7280)
                     )
@@ -252,32 +274,62 @@ fun MmseScoreGraph(scores: List<MmseScore>) {
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-            ) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    val width = size.width
-                    val height = size.height
-                    
-                    // Grid lines (Horizontal)
-                    val gridLines = 5
-                    for (i in 0..gridLines) {
-                        val y = height - (i.toFloat() / gridLines) * height
-                        drawLine(
-                            color = Color(0xFFF1F5F9),
-                            start = Offset(0f, y),
-                            end = Offset(width, y),
-                            strokeWidth = 1.dp.toPx()
+            if (scores.size < 2) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (scores.size == 1) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "Score: ${scores[0].total_score.toInt()}",
+                                fontSize = 32.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF4A9FFF)
+                            )
+                            Text(
+                                text = "Need at least 2 sessions for trend",
+                                fontSize = 14.sp,
+                                color = Color(0xFF6B7280)
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = "Take your first assessment to see history",
+                            fontSize = 14.sp,
+                            color = Color(0xFF6B7280),
+                            textAlign = TextAlign.Center
                         )
                     }
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                ) {
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        val width = size.width
+                        val height = size.height
+                        
+                        // Grid lines (Horizontal)
+                        val gridLines = 5
+                        for (i in 0..gridLines) {
+                            val y = height - (i.toFloat() / gridLines) * height
+                            drawLine(
+                                color = Color(0xFFF1F5F9),
+                                start = Offset(0f, y),
+                                end = Offset(width, y),
+                                strokeWidth = 1.dp.toPx()
+                            )
+                        }
 
-                    if (scores.size >= 2) {
                         val spacing = width / (scores.size - 1)
-                        val points = scores.mapIndexed { index, score ->
+                        val points = scores.mapIndexed { index, assessment ->
                             val x = index * spacing
-                            val targetY = height - (score.score.toFloat() / maxScore) * height
+                            val targetY = height - (assessment.total_score / maxScore) * height
                             // Animate from bottom to targetY
                             val y = height - (height - targetY) * animationProgress.value
                             Offset(x, y)
@@ -344,22 +396,23 @@ fun MmseScoreGraph(scores: List<MmseScore>) {
             Spacer(modifier = Modifier.height(16.dp))
 
             // X-axis labels
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                scores.forEach { score ->
-                    Text(
-                        text = "S${score.session}",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF94A3B8),
-                        modifier = Modifier.width(32.dp),
-                        textAlign = TextAlign.Center
-                    )
+            if (scores.isNotEmpty()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    scores.forEachIndexed { index, _ ->
+                        Text(
+                            text = "S${index + 1}",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF94A3B8),
+                            modifier = Modifier.width(32.dp),
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
             }
         }
     }
 }
-

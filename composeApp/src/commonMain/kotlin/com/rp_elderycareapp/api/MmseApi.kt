@@ -18,6 +18,24 @@ data class MMSEFinalizeResponse(
     val avg_ml_probability: Float
 )
 
+@Serializable
+data class MmseAssessment(
+    val _id: String,
+    val user_id: String,
+    val assessment_type: String,
+    val assessment_date: String,
+    val total_score: Float,
+    val status: String,
+    val completed_at: String? = null
+)
+
+@Serializable
+data class MmseAssessmentResponse(
+    val user_id: String,
+    val total_assessments: Int,
+    val assessments: List<MmseAssessment>
+)
+
 class MmseApi {
     private val baseUrl = getApiBaseUrl()
 
@@ -28,6 +46,29 @@ class MmseApi {
                 isLenient = true
                 prettyPrint = true
             })
+        }
+    }
+
+    suspend fun getUserMmseAssessments(userId: String): Result<MmseAssessmentResponse> {
+        return try {
+            val url = "$baseUrl/api/mmse/user/$userId"
+            
+            println("--- FETCHING MMSE ASSESSMENTS ---")
+            println("URL: $url")
+            println("User ID: $userId")
+            println("---------------------------------")
+
+            val response = httpClient.get(url)
+
+            if (response.status.isSuccess()) {
+                val body = response.body<MmseAssessmentResponse>()
+                Result.success(body)
+            } else {
+                val errorBody = response.body<String>()
+                Result.failure(Exception("Fetch assessments failed: ${response.status} - $errorBody"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 

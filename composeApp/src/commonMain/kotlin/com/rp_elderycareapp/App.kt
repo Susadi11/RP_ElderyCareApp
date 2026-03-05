@@ -149,7 +149,9 @@ fun App() {
                 }
                 composable(NavRoutes.MMSE_TEST.route) {
                     Box(modifier = Modifier.padding(innerPadding)) {
+                        val userId = authViewModel.currentUser.value?.user_id ?: ""
                         MmseTestScreen(
+                            userId = userId,
                             onStartAssessmentClick = { navController.navigate(NavRoutes.MMSE_START_TEST.route) }
                         )
                     }
