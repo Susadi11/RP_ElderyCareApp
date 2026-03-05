@@ -23,7 +23,7 @@ object MmseQuestions {
         MmseQuestion(
             id = 1,
             question = "What year is this?",
-            category = "Naming",
+            category = "Year",
             maxPoints = 1,
             instructions = "Accept exact answer only",
             timeLimit = 10,
@@ -31,7 +31,7 @@ object MmseQuestions {
         MmseQuestion(
             id = 2,
             question = "What season is this?",
-            category = "Naming",
+            category = "Season",
             maxPoints = 1,
             instructions = "Accept either last week of old season or first week of new season",
             timeLimit = 10,
@@ -40,7 +40,7 @@ object MmseQuestions {
         MmseQuestion(
             id = 3,
             question = "What month is this?",
-            category = "Naming",
+            category = "Month",
             maxPoints = 1,
             instructions = "Accept either first day of new month or last day of previous month",
             timeLimit = 10,
@@ -48,7 +48,7 @@ object MmseQuestions {
         MmseQuestion(
             id = 4,
             question = "What is today's date?",
-            category = "Naming",
+            category = "Date",
             maxPoints = 1,
             instructions = "Accept previous or next date",
             timeLimit = 10,
@@ -56,7 +56,7 @@ object MmseQuestions {
         MmseQuestion(
             id = 5,
             question = "What day of the week is this?",
-            category = "Naming",
+            category = "Day",
             maxPoints = 1,
             instructions = "Accept exact answer only",
             timeLimit = 10,
@@ -66,7 +66,7 @@ object MmseQuestions {
         MmseQuestion(
             id = 6,
             question = "What country are we in?",
-            category = "Naming",
+            category = "Country",
             maxPoints = 1,
             instructions = "Accept exact answer only",
             timeLimit = 10,
@@ -75,7 +75,7 @@ object MmseQuestions {
         MmseQuestion(
             id = 7,
             question = "What province are we in?",
-            category = "Naming",
+            category = "Province",
             maxPoints = 1,
             instructions = "Accept exact answer only",
             timeLimit = 10,
@@ -84,7 +84,7 @@ object MmseQuestions {
         MmseQuestion(
             id = 8,
             question = "What city or town are we in?",
-            category = "Naming",
+            category = "City",
             maxPoints = 1,
             instructions = "Accept exact answer only",
             timeLimit = 10,
@@ -93,7 +93,7 @@ object MmseQuestions {
         MmseQuestion(
             id = 9,
             question = "What is the name of this building?",
-            category = "Naming",
+            category = "Building",
             maxPoints = 1,
             instructions = "In home: street address. In facility: building name",
             timeLimit = 10,
@@ -102,7 +102,7 @@ object MmseQuestions {
         MmseQuestion(
             id = 10,
             question = "What floor of the building are we on?",
-            category = "Naming",
+            category = "Floor",
             maxPoints = 1,
             instructions = "In home: what room. In facility: what floor",
             timeLimit = 10,
@@ -142,24 +142,16 @@ object MmseQuestions {
         // NAMING (2 points total)
         MmseQuestion(
             id = 14,
-            question = "What is this called? (Show wristwatch)",
+            question = "What are these called?",
             category = "Naming",
-            maxPoints = 1,
-            instructions = "Accept 'wristwatch' or 'watch'. Do not accept 'clock' or 'time'",
-            timeLimit = 10,
-        ),
-        MmseQuestion(
-            id = 15,
-            question = "What is this called? (Show pencil)",
-            category = "Naming",
-            maxPoints = 1,
-            instructions = "Accept 'pencil' only. Score 0 for 'pen'",
-            timeLimit = 10
+            maxPoints = 2,
+            instructions = "Identify both the wristwatch and the pencil.",
+            timeLimit = 20
         ),
 
         // REPETITION (1 point total)
         MmseQuestion(
-            id = 16,
+            id = 15,
             question = "I would like you to repeat a phrase after me: No ifs, ands or buts",
             category = "Repetition",
             maxPoints = 1,
