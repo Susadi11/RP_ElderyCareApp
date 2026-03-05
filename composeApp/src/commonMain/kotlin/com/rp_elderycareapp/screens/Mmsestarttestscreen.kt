@@ -45,7 +45,7 @@ fun MmseStartTestScreen(
     var isStarting by remember { mutableStateOf(false) }
     
     val currentUser by authViewModel.currentUser
-    val userId = currentUser?.user_id ?: "unknown_user"
+    val userId = currentUser?.user_id ?: "USER-SUSADI-24-F71B"
 
     LaunchedEffect(Unit) {
         launch {

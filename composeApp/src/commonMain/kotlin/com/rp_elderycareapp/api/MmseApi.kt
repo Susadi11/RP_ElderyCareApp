@@ -25,7 +25,7 @@ class MmseApi {
 
     suspend fun startMmse(userId: String): Result<String> {
         return try {
-            val url = "$baseUrl/mmse/start"
+            val url = "$baseUrl/api/mmse/start"
             
             // Log for debugging
             println("--- STARTING MMSE ---")
@@ -59,7 +59,7 @@ class MmseApi {
         fileName: String
     ): Result<Unit> {
         return try {
-            val url = "$baseUrl/mmse/submit"
+            val url = "$baseUrl/api/mmse/submit"
             
             // Log the data to be sent to Logcat
             println("--- MMSE SUBMISSION ---")

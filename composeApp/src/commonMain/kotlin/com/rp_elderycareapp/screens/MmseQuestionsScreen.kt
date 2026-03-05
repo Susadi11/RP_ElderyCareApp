@@ -251,10 +251,19 @@ fun MmseQuestionsScreen(
                                         null
                                     }
 
+                                    val backendQuestionType = when (currentQuestion.category) {
+                                        "Registration" -> "repeat_words"
+                                        "Recall" -> "recall_words"
+                                        "Naming" -> "name_objects"
+                                        "Repetition" -> "repeat_sentence"
+                                        "Attention" -> "spell_world"
+                                        else -> currentQuestion.category
+                                    }
+
                                     val result = mmseApi.submitMmse(
                                         assessmentId = assessmentId,
                                         userId = userId,
-                                        questionType = currentQuestion.category,
+                                        questionType = backendQuestionType,
                                         caregiverIsCorrect = caregiverIsCorrect,
                                         audioBytes = audioBytes,
                                         fileName = fileName

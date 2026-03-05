@@ -154,7 +154,7 @@ fun App() {
                         },
                         onStartTest = { assessmentId ->
                             // ✅ Navigate to questions screen with assessmentId and userId
-                            val userId = authViewModel.currentUser.value?.user_id ?: "unknown_user"
+                            val userId = authViewModel.currentUser.value?.user_id ?: "USER-SUSADI-24-F71B"
                             navController.navigate("mmse_questions/$userId/$assessmentId")
                         }
                     )
