@@ -28,6 +28,7 @@ import com.rp_elderycareapp.api.GameApi
 import com.rp_elderycareapp.components.GameCalibration
 import com.rp_elderycareapp.components.GridTapGame
 import com.rp_elderycareapp.data.GameRepository
+import com.rp_elderycareapp.viewmodel.AuthViewModel
 import com.rp_elderycareapp.viewmodels.GameState
 import com.rp_elderycareapp.viewmodels.GameViewModel
 import kotlinx.datetime.Clock
@@ -35,12 +36,14 @@ import kotlinx.datetime.Clock
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameScreen(
-    userId: String = "user123", // Replace with actual user ID from your auth system
+    authViewModel: AuthViewModel? = null,
     onNavigateBack: () -> Unit = {}
 ) {
+    val userId = authViewModel?.currentUser?.value?.user_id ?: ""
+    val token = authViewModel?.getAccessToken() ?: ""
     val repository = remember { GameRepository(GameApi()) }
-    val viewModel: GameViewModel = remember {
-        GameViewModel(repository, userId)
+    val viewModel: GameViewModel = remember(userId, token) {
+        GameViewModel(repository, userId, token)
     }
 
     val uiState by viewModel.uiState.collectAsState()

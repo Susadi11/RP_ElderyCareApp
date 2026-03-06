@@ -37,7 +37,8 @@ data class GameUiState(
 
 class GameViewModel(
     private val repository: GameRepository,
-    private val userId: String
+    private val userId: String,
+    private val token: String = ""
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(GameUiState())
@@ -156,7 +157,8 @@ class GameViewModel(
                 sessionId = sessionId,
                 gameType = "grid_tap_3x3",
                 level = 1,
-                trials = _uiState.value.trials
+                trials = _uiState.value.trials,
+                token = token
             ).fold(
                 onSuccess = { response ->
                     _uiState.value = _uiState.value.copy(

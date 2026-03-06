@@ -129,7 +129,7 @@ fun App() {
                 }
                 composable(NavRoutes.GAME.route) {
                     Box(modifier = Modifier.padding(innerPadding)) {
-                        GameScreen()
+                        GameScreen(authViewModel = authViewModel)
                     }
                 }
                 composable(NavRoutes.HOME.route) {

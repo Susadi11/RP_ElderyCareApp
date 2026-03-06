@@ -14,13 +14,15 @@ import kotlinx.serialization.decodeFromString
 class AuthViewModel(private val preferencesManager: PreferencesManager) {
     private val userApi = UserApi()
     private val json = Json { ignoreUnknownKeys = true }
-    
+
     // UI State
     val isLoading = mutableStateOf(false)
     val errorMessage = mutableStateOf<String?>(null)
     val successMessage = mutableStateOf<String?>(null)
     val isAuthenticated = mutableStateOf(false)
     val currentUser = mutableStateOf<UserProfile?>(null)
+
+    fun getAccessToken(): String? = preferencesManager.getAccessToken()
 
     init {
         // Check if user is already logged in

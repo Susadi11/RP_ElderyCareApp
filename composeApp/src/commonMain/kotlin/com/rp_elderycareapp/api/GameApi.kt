@@ -66,12 +66,16 @@ class GameApi {
     }
 
     suspend fun submitSession(
-        request: GameSessionRequest
+        request: GameSessionRequest,
+        token: String = ""
     ): Result<GameSessionResponse> {
         return try {
             println("GameApi: Attempting to submit session to: $baseUrl/game/session")
             val response: GameSessionResponse = httpClient.post("$baseUrl/game/session") {
                 contentType(ContentType.Application.Json)
+                if (token.isNotEmpty()) {
+                    header(io.ktor.http.HttpHeaders.Authorization, "Bearer $token")
+                }
                 setBody(request)
             }.body()
             println("GameApi: Session submitted successfully")

@@ -35,7 +35,8 @@ class GameRepository(private val gameApi: GameApi) {
         sessionId: String,
         gameType: String,
         level: Int,
-        trials: List<TrialData>
+        trials: List<TrialData>,
+        token: String = ""
     ): Result<GameSessionResponse> = withContext(Dispatchers.Default) {
         try {
             val request = GameSessionRequest(
@@ -45,7 +46,7 @@ class GameRepository(private val gameApi: GameApi) {
                 level = level,
                 trials = trials
             )
-            gameApi.submitSession(request)
+            gameApi.submitSession(request, token)
         } catch (e: Exception) {
             Result.failure(e)
         }

@@ -97,17 +97,6 @@ fun ReminderScreen(userId: String) {
                 }
             )
         },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { /* Navigate to dashboard */ },
-                containerColor = MaterialTheme.colorScheme.secondary,
-                contentColor = Color.White
-            ) {
-                Icon(Icons.Default.Analytics, contentDescription = "Dashboard")
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("View Analytics")
-            }
-        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -666,7 +655,12 @@ private fun CreateReminderDialog(
     var priority by remember { mutableStateOf("medium") }
     
     // Date and Time for scheduled_time
-    var selectedDate by remember { mutableStateOf("2026-01-06") } // Today as default
+    val todayDate = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+    var selectedDate by remember {
+        mutableStateOf(
+            "${todayDate.year}-${todayDate.monthNumber.toString().padStart(2, '0')}-${todayDate.dayOfMonth.toString().padStart(2, '0')}"
+        )
+    }
     var selectedTime by remember { mutableStateOf("13:00") }
     
     // Repeat pattern
