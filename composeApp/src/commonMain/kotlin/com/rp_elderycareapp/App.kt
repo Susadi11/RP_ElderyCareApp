@@ -171,14 +171,14 @@ fun App() {
                 }
 
                 composable(NavRoutes.MMSE_RESULTS.route) { backStackEntry ->
-                    val score = backStackEntry.arguments?.getString("score")?.toIntOrNull() ?: 0
+                    val score = backStackEntry.arguments?.getString("score")?.toFloatOrNull() ?: 0f
                     val riskLabel = backStackEntry.arguments?.getString("riskLabel")
                     val probability = backStackEntry.arguments?.getString("probability")?.toFloatOrNull()
-                    val maxScore = com.rp_elderycareapp.data.MmseQuestions.allQuestions.sumOf { it.maxPoints }
                     
                     MmseResultScreen(
                         score = score,
-                        maxScore = maxScore,
+                        rawMaxScore = 20,
+                        maxScore = 30,
                         mlRiskLabel = riskLabel,
                         mlProbability = probability,
                         onNavigateToHome = {
@@ -204,7 +204,7 @@ fun App() {
                                 if (result.isSuccess) {
                                     val finalizeData = result.getOrNull()
                                     // Use server's total score if available, fallback to local score
-                                    val finalScore = finalizeData?.total_score?.toInt() ?: score
+                                    val finalScore = finalizeData?.total_score ?: score
                                     val riskLabel = finalizeData?.ml_risk_label ?: ""
                                     val probability = finalizeData?.avg_ml_probability ?: 0f
                                     

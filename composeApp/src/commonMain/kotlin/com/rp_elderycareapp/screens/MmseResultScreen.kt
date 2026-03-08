@@ -22,29 +22,33 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MmseResultScreen(
-    score: Int,
+    score: Float,
     mlRiskLabel: String? = null,
     mlProbability: Float? = null,
+    rawMaxScore: Int = 20,
     maxScore: Int = 30,
     onNavigateToHome: () -> Unit = {},
     onViewDetails: () -> Unit = {}
 ) {
+    val scaledScore = ((score / rawMaxScore.toFloat()) * maxScore.toFloat()).roundToInt()
+        .coerceIn(0, maxScore)
     // Determine risk level based on score (MMSE standard)
     val (riskLevel, riskColor, riskEmoji) = when {
-        score >= 26 -> Triple("Normal", Color(0xFF10B981), "🎉")
-        score >= 20 -> Triple("Mild", Color(0xFFFBBF24), "⚠️")
-        score >= 10 -> Triple("Moderate", Color(0xFFF97316), "⚠️")
+        scaledScore >= 26 -> Triple("Normal", Color(0xFF10B981), "🎉")
+        scaledScore >= 20 -> Triple("Mild", Color(0xFFFBBF24), "⚠️")
+        scaledScore >= 10 -> Triple("Moderate", Color(0xFFF97316), "⚠️")
         else -> Triple("Severe", Color(0xFFEF4444), "🚨")
     }
 
     val recommendation = when {
-        score >= 26 -> "Score is within normal range. Continue regular monitoring."
-        score >= 20 -> "Mild cognitive impairment detected. Consider follow-up assessment."
-        score >= 10 -> "Moderate cognitive impairment. Recommend comprehensive medical evaluation."
+        scaledScore >= 26 -> "Score is within normal range. Continue regular monitoring."
+        scaledScore >= 20 -> "Mild cognitive impairment detected. Consider follow-up assessment."
+        scaledScore >= 10 -> "Moderate cognitive impairment. Recommend comprehensive medical evaluation."
         else -> "Severe cognitive impairment. Urgent medical evaluation recommended."
     }
 
@@ -77,7 +81,7 @@ fun MmseResultScreen(
                 )
             )
         }
-        if (score >= 26) {
+        if (scaledScore >= 26) {
             delay(800)
             showConfetti = true
         }
@@ -202,7 +206,7 @@ fun MmseResultScreen(
                                 verticalAlignment = Alignment.Bottom
                             ) {
                                 Text(
-                                    text = "$score",
+                                    text = "$scaledScore",
                                     fontSize = 88.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = riskColor,
@@ -224,7 +228,7 @@ fun MmseResultScreen(
                             LaunchedEffect(Unit) {
                                 delay(600)
                                 progressAnimation.animateTo(
-                                    targetValue = score.toFloat() / maxScore.toFloat(),
+                                    targetValue = scaledScore.toFloat() / maxScore.toFloat(),
                                     animationSpec = tween(1000, easing = FastOutSlowInEasing)
                                 )
                             }
@@ -257,7 +261,7 @@ fun MmseResultScreen(
                             Spacer(modifier = Modifier.height(8.dp))
 
                             Text(
-                                text = "${(score.toFloat() / maxScore.toFloat() * 100).toInt()}%",
+                                text = "${(scaledScore.toFloat() / maxScore.toFloat() * 100).toInt()}%",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = Color(0xFF6B7280)
@@ -300,9 +304,9 @@ fun MmseResultScreen(
                             ) {
                                 Icon(
                                     imageVector = when {
-                                        score >= 26 -> Icons.Default.CheckCircle
-                                        score >= 20 -> Icons.Default.Warning
-                                        score >= 10 -> Icons.Default.Info
+                                        scaledScore >= 26 -> Icons.Default.CheckCircle
+                                        scaledScore >= 20 -> Icons.Default.Warning
+                                        scaledScore >= 10 -> Icons.Default.Info
                                         else -> Icons.Default.Error
                                     },
                                     contentDescription = "Risk Level",
@@ -339,13 +343,13 @@ fun MmseResultScreen(
                         Spacer(modifier = Modifier.height(20.dp))
 
                         // Score Categories
-                        ScoreCategoryItem("26-30", "Normal", score >= 26)
+                        ScoreCategoryItem("26-30", "Normal", scaledScore >= 26)
                         Spacer(modifier = Modifier.height(12.dp))
-                        ScoreCategoryItem("20-25", "Mild", score in 20..25)
+                        ScoreCategoryItem("20-25", "Mild", scaledScore in 20..25)
                         Spacer(modifier = Modifier.height(12.dp))
-                        ScoreCategoryItem("10-19", "Moderate", score in 10..19)
+                        ScoreCategoryItem("10-19", "Moderate", scaledScore in 10..19)
                         Spacer(modifier = Modifier.height(12.dp))
-                        ScoreCategoryItem("0-9", "Severe", score in 0..9)
+                        ScoreCategoryItem("0-9", "Severe", scaledScore in 0..9)
                     }
                 }
             }
