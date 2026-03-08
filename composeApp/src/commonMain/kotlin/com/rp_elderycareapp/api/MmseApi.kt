@@ -19,6 +19,13 @@ data class MMSEFinalizeResponse(
 )
 
 @Serializable
+data class MMSESubmitResponse(
+    val question_score: Float,
+    val ml_prediction: String,
+    val ml_probability: Float
+)
+
+@Serializable
 data class MlSummary(
     val avg_probability: Float? = null,
     val ml_risk_label: String? = null
@@ -113,7 +120,7 @@ class MmseApi {
         caregiverIsCorrect: Boolean?,
         audioBytes: ByteArray,
         fileName: String
-    ): Result<Unit> {
+    ): Result<MMSESubmitResponse> {
         return try {
             val url = "$baseUrl/api/mmse/submit"
             
@@ -144,7 +151,8 @@ class MmseApi {
             )
 
             if (response.status.isSuccess()) {
-                Result.success(Unit)
+                val body = response.body<MMSESubmitResponse>()
+                Result.success(body)
             } else {
                 val errorBody = response.body<String>()
                 Result.failure(Exception("Upload failed: ${response.status} - $errorBody"))

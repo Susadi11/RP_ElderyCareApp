@@ -54,7 +54,7 @@ fun MmseQuestionsScreen(
     onNavigateBack: () -> Unit = {},
     userId: String = "USER-SUSA-0-7077", // Default for demo
     assessmentId: String = "69a1bdd2988ad8fa563fbef0",
-    onComplete: (totalScore: Int) -> Unit = {}
+    onComplete: (totalScore: Float) -> Unit = {}
 ) {
     val questions = remember { MmseQuestions.allQuestions }
     val scope = rememberCoroutineScope()
@@ -62,7 +62,7 @@ fun MmseQuestionsScreen(
 
     var currentQuestionIndex by remember { mutableStateOf(0) }
     var recordingState by remember { mutableStateOf(RecordingState.IDLE) }
-    var currentScore by remember { mutableStateOf(0) }
+    var currentScore by remember { mutableStateOf(0f) }
     var evaluationStatus by remember { mutableStateOf(EvaluationStatus.PENDING) }
     var pointsEarned by remember { mutableStateOf(0) }
     var isSubmitting by remember { mutableStateOf(false) }
@@ -280,11 +280,9 @@ fun MmseQuestionsScreen(
                                     )
                                     
                                     if (result.isSuccess) {
-                                        val score = if (currentQuestion.requiresCaregiverEvaluation) {
-                                            pointsEarned
-                                        } else {
-                                            1 // Placeholder for server-side evaluation
-                                        }
+                                        val response = result.getOrNull()
+                                        val score = response?.question_score ?: 0f
+                                        
                                         currentScore += score
 
                                         if (currentQuestionIndex < questions.size - 1) {
