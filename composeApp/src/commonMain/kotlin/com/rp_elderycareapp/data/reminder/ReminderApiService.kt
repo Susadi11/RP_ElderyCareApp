@@ -64,8 +64,9 @@ class ReminderApiService {
             try {
                 val apiResponse: ApiResponse<Reminder> = response.body()
                 println("API Response: status=${apiResponse.status}, data=${apiResponse.data}, error=${apiResponse.error}")
-                if (apiResponse.data != null) {
-                    Result.success(apiResponse.data)
+                val reminderPayload = apiResponse.data ?: apiResponse.reminder
+                if (reminderPayload != null) {
+                    Result.success(reminderPayload)
                 } else if (apiResponse.status == "success") {
                     // Server created the reminder but did not return the object in "data".
                     // Signal success with a sentinel so the ViewModel reloads the list.
@@ -193,7 +194,7 @@ class ReminderApiService {
     suspend fun getUserReminders(userId: String, statusFilter: String? = null): Result<List<Reminder>> {
         return try {
             val url = if (statusFilter != null) {
-                "$baseUrl/user/$userId?status_filter=$statusFilter"
+                "$baseUrl/user/$userId?status=$statusFilter"
             } else {
                 "$baseUrl/user/$userId"
             }

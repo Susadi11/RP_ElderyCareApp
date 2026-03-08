@@ -36,18 +36,20 @@ class ReminderViewModel(private val alarmManager: PlatformAlarmManager? = null) 
     private var webSocketService: ReminderWebSocketService? = null
 
     companion object {
-        /** How long the alarm plays before being temporarily silenced (2 minutes). */
-        private const val NO_RESPONSE_MILLIS = 2L * 60 * 1000
-        /** Silent gap between repeats (1 minute). */
-        private const val RETRY_DELAY_MILLIS  = 1L * 60 * 1000
-        /** Maximum number of re-raise cycles before marking as missed. */
-        private const val MAX_REPEATS = 3
+        /** Default no-response timeout when backend does not provide timeout_seconds. */
+        private const val DEFAULT_NO_RESPONSE_MILLIS = 3L * 60 * 1000
+        /** Silent gap between repeats (3 minutes). */
+        private const val RETRY_DELAY_MILLIS  = 3L * 60 * 1000
+        /** Maximum number of attempts before marking as missed (2 = initial + 1 repeat). */
+        private const val MAX_ATTEMPTS = 2
     }
 
-    /** Job that runs the 2-min → stop → 1-min → repeat timeout cycle. */
+    /** Job that runs the frontend visibility timeout cycle for the active alarm. */
     private var alarmTimeoutJob: Job? = null
     /** Keeps a reference to the currently ringing reminder so repeats can re-use it. */
     private var lastAlarmReminder: Reminder? = null
+    /** Track locally-missed alarms to prevent re-triggering */
+    private val locallyMissedAlarms = mutableSetOf<String>()
     
     var reminderState by mutableStateOf<ReminderUiState>(ReminderUiState.Loading)
         private set
@@ -105,33 +107,35 @@ class ReminderViewModel(private val alarmManager: PlatformAlarmManager? = null) 
         // Listen for initial alarm notifications
         scope.launch {
             webSocketService?.reminderAlarms?.collect { reminder ->
+                // Don't trigger if we already marked it as missed locally
+                if (locallyMissedAlarms.contains(reminder.id)) {
+                    println("=== ⏭️ Skipping already-missed alarm: ${reminder.id} ===")
+                    return@collect
+                }
+                
                 println("=== 🚨 ALARM RECEIVED: ${reminder.title} ===")
                 lastAlarmReminder = reminder
                 _alarmRepeatCount.value = 0
                 _activeAlarm.value = reminder
                 // Trigger platform-specific alarm (music, vibration, notification)
                 alarmManager?.triggerAlarm(reminder)
-                // Start the 2-min → stop → 1-min → repeat timeout cycle
-                startAlarmTimeoutCycle(reminder, userId)
+                // Start timeout using backend-provided timeout_seconds (fallback to 3 minutes)
+                startAlarmTimeoutCycle(reminder)
             }
         }
 
-        // Listen for repeat alarms from backend — sync visual count.
-        // The frontend timeout cycle already manages the actual re-triggering, so
-        // we only update the count here to keep both in sync. If a backend repeat
-        // arrives while the alarm is silenced (during the 1-min gap), we also
-        // re-show it immediately (the backend may have tighter timing).
+        // Listen for repeat alarms from backend — only sync visual count, don't restart cycle
+        // Our local timeout cycle handles the actual re-triggering
         scope.launch {
             webSocketService?.alarmRepeat?.collect { event ->
-                println("=== 🔁 REPEAT ALARM #${event.repeatCount}: ${event.reminderId} ===")
-                _alarmRepeatCount.value = event.repeatCount
-                val last = lastAlarmReminder
-                if (last != null && last.id == event.reminderId && _activeAlarm.value == null) {
-                    // Alarm was in the silent gap — backend beat the timer, re-show now
-                    cancelAlarmTimeout()
-                    _activeAlarm.value = last
-                    alarmManager?.triggerAlarm(last)
-                    startAlarmTimeoutCycle(last, event.reminderId)
+                println("=== 🔁 BACKEND REPEAT EVENT #${event.repeatCount}: ${event.reminderId} ===")
+                
+                // Only update the count if we're still actively handling this alarm
+                if (lastAlarmReminder?.id == event.reminderId && !locallyMissedAlarms.contains(event.reminderId)) {
+                    _alarmRepeatCount.value = event.repeatCount
+                    println("=== ℹ️ Updated repeat count to ${event.repeatCount}, local cycle continues ===")
+                } else {
+                    println("=== ⏭️ Ignoring backend repeat - alarm already handled locally ===")
                 }
             }
         }
@@ -161,7 +165,12 @@ class ReminderViewModel(private val alarmManager: PlatformAlarmManager? = null) 
                     _activeAlarm.value = null
                     _alarmRepeatCount.value = 0
                 }
-                _missedAlarmMessage.value = event.message ?: "⚠️ You missed a reminder. Caregiver has been notified."
+                _missedAlarmMessage.value = event.message
+                    ?: if (event.caregiverNotified == false) {
+                        "⚠️ You missed a reminder."
+                    } else {
+                        "⚠️ You missed a reminder. Caregiver has been notified."
+                    }
             }
         }
         
@@ -375,22 +384,23 @@ class ReminderViewModel(private val alarmManager: PlatformAlarmManager? = null) 
     /**
      * Starts the frontend alarm timeout cycle for the given reminder.
      *
-     * Cycle per iteration:
-     *  - Wait 2 minutes (NO_RESPONSE_MILLIS): alarm plays + dialog visible
-     *  - No response → hide SCREEN ONLY (sound keeps playing in background)
-     *  - Wait 1 minute (RETRY_DELAY_MILLIS): sound still playing, no screen
-     *  - Re-raise: show dialog again with REPEAT #X badge
-     *  - After MAX_REPEATS cycles with no response → mark as missed, stop everything
-     *
-     * The cycle is cancelled as soon as the user acknowledges, snoozes, or stops the alarm.
+     * Cycle:
+     *  1. Wait timeout_seconds (fallback: 3 min): alarm plays + dialog visible
+     *  2. No response → hide screen, stop sound
+     *  3. Wait 3 minutes gap
+     *  4. If attempts < MAX_ATTEMPTS (2): re-raise alarm and repeat
+     *  5. If attempts >= MAX_ATTEMPTS: mark as MISSED in DB and stop
      */
-    private fun startAlarmTimeoutCycle(reminder: Reminder, userId: String) {
+    private fun startAlarmTimeoutCycle(reminder: Reminder) {
         alarmTimeoutJob?.cancel()
         alarmTimeoutJob = scope.launch {
-            var repeats = 0
-            while (isActive) {
+            val timeoutSeconds = reminder.timeoutSeconds ?: (DEFAULT_NO_RESPONSE_MILLIS / 1000L).toInt()
+            val noResponseMillis = (timeoutSeconds.coerceAtLeast(1) * 1000L)
+            var attemptCount = 1  // Start at 1 (first alarm)
+            
+            while (isActive && attemptCount <= MAX_ATTEMPTS) {
                 // ── Phase 1: wait for the user to respond ─────────────────────────
-                delay(NO_RESPONSE_MILLIS)
+                delay(noResponseMillis)
 
                 // User responded in time — exit
                 if (_activeAlarm.value?.id != reminder.id && lastAlarmReminder?.id != reminder.id) {
@@ -398,41 +408,49 @@ class ReminderViewModel(private val alarmManager: PlatformAlarmManager? = null) 
                     return@launch
                 }
 
-                repeats++
-                println("=== ⏱️ No response after 2 min (repeat $repeats/$MAX_REPEATS) for '${reminder.title}' ===")
+                println("=== ⏱️ No response after ${noResponseMillis / 1000}s (attempt $attemptCount/$MAX_ATTEMPTS) for '${reminder.title}' ===")
 
-                if (repeats >= MAX_REPEATS) {
-                    // ── All retries exhausted → stop everything and declare missed ──
-                    println("=== ❌ '${reminder.title}' MISSED after $repeats repeats ===")
-                    alarmManager?.dismissAlarm()   // stop sound + vibration completely
+                // Check if we've exhausted all attempts
+                if (attemptCount >= MAX_ATTEMPTS) {
+                    // ── All attempts exhausted → MARK AS MISSED ──
+                    println("=== ❌ '${reminder.title}' MISSED after $attemptCount attempts ===")
+                    alarmManager?.dismissAlarm()   // stop sound + vibration
                     _activeAlarm.value = null
                     _alarmRepeatCount.value = 0
                     lastAlarmReminder = null
-                    // Notify backend to update status → "missed"
+                    
+                    // Track as locally missed to prevent re-triggering
+                    locallyMissedAlarms.add(reminder.id)
+                    
+                    // Mark as missed in database
                     scope.launch {
-                        apiService.markReminderMissed(reminder.id, userId)
-                            .onSuccess { println("=== Backend marked as missed ===") }
-                            .onFailure { println("=== Could not reach backend for missed status: ${it.message} ===") }
-                        loadReminders(userId)
+                        apiService.markReminderMissed(reminder.id, reminder.userId)
+                            .onSuccess { 
+                                println("=== ✅ Backend marked as missed ===")
+                                loadReminders(reminder.userId)
+                            }
+                            .onFailure { 
+                                println("=== ❌ Failed to mark as missed: ${it.message} ===")
+                            }
                     }
-                    _missedAlarmMessage.value =
-                        "⚠️ You missed: ${reminder.title}.\nYour caregiver has been notified."
+                    
+                    _missedAlarmMessage.value = "⚠️ You missed: ${reminder.title}.\nYour caregiver has been notified."
                     return@launch
                 }
 
-                // ── Phase 2: 1-minute gap — hide screen but KEEP sound playing ─────
-                // Only clear the active alarm (hides dialog); do NOT call stopAlarm()
+                // ── Phase 2: 3-minute gap — hide screen and stop sound ─────
                 _activeAlarm.value = null
-                println("=== 🔕 Screen hidden — sound still playing for 1 min ===")
+                alarmManager?.dismissAlarm()
+                println("=== 🔕 Screen hidden — waiting 3 minutes before retry ===")
 
-                delay(RETRY_DELAY_MILLIS)
+                delay(RETRY_DELAY_MILLIS)  // 3 minutes gap
                 if (!isActive) return@launch
 
-                // ── Phase 3: re-raise — show dialog again with incremented count ───
-                println("=== 🔁 Re-raising alarm (repeat #$repeats): '${reminder.title}' ===")
-                _alarmRepeatCount.value = repeats
+                // ── Phase 3: re-raise alarm (next attempt) ──
+                attemptCount++
+                _alarmRepeatCount.value = attemptCount - 1  // Show repeat count (0, 1, etc.)
+                println("=== 🔁 Re-raising alarm (attempt $attemptCount/$MAX_ATTEMPTS): '${reminder.title}' ===")
                 _activeAlarm.value = reminder
-                // Sound is already playing; restart it cleanly so it's fresh
                 alarmManager?.triggerAlarm(reminder)
             }
         }
@@ -442,6 +460,8 @@ class ReminderViewModel(private val alarmManager: PlatformAlarmManager? = null) 
     private fun cancelAlarmTimeout() {
         alarmTimeoutJob?.cancel()
         alarmTimeoutJob = null
+        // Remove from missed set when user responds
+        lastAlarmReminder?.id?.let { locallyMissedAlarms.remove(it) }
         lastAlarmReminder = null
     }
 
@@ -576,15 +596,19 @@ class ReminderViewModel(private val alarmManager: PlatformAlarmManager? = null) 
                             val reminder = response.urgentReminders.first()
                             println("=== 🚨 DUE REMINDER FOUND: ${reminder.title} ===")
                             
-                            // Only trigger if not already showing this alarm
-                            if (_activeAlarm.value?.id != reminder.id) {
+                            // Only trigger if not already showing this alarm and not locally missed
+                            if (_activeAlarm.value?.id != reminder.id 
+                                && lastAlarmReminder?.id != reminder.id
+                                && !locallyMissedAlarms.contains(reminder.id)) {
                                 lastAlarmReminder = reminder
                                 _alarmRepeatCount.value = 0
                                 _activeAlarm.value = reminder
                                 // Trigger platform-specific alarm (music, vibration, notification)
                                 alarmManager?.triggerAlarm(reminder)
-                                // Start the 2-min → stop → 1-min → repeat timeout cycle
-                                startAlarmTimeoutCycle(reminder, userId)
+                                // Start timeout using backend-provided timeout_seconds (fallback to 3 minutes)
+                                startAlarmTimeoutCycle(reminder)
+                            } else if (locallyMissedAlarms.contains(reminder.id)) {
+                                println("=== ⏭️ Skipping locally-missed alarm in polling: ${reminder.id} ===")
                             }
                         } else {
                             println("=== ✓ No urgent reminders at this time ===")

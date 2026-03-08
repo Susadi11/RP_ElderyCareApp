@@ -116,8 +116,26 @@ class ReminderWebSocketService(
             
             when (wsMessage.type) {
                 "reminder" -> {
-                    // Parse the reminder from the data field
-                    val reminder = json.decodeFromString<Reminder>(wsMessage.data ?: return)
+                    // Backend may send reminder either in `data` JSON string or flat fields.
+                    val reminder = if (!wsMessage.data.isNullOrBlank()) {
+                        json.decodeFromString<Reminder>(wsMessage.data)
+                    } else {
+                        val reminderId = wsMessage.reminderId ?: return
+                        val title = wsMessage.title ?: return
+                        val scheduledTime = wsMessage.scheduledTime ?: wsMessage.timestamp ?: return
+                        Reminder(
+                            id = reminderId,
+                            userId = wsMessage.userId ?: userId,
+                            title = title,
+                            description = wsMessage.description,
+                            scheduledTime = scheduledTime,
+                            priority = wsMessage.priority ?: "medium",
+                            category = wsMessage.category ?: "other",
+                            escalationEnabled = wsMessage.escalationEnabled ?: true,
+                            timeoutSeconds = wsMessage.timeoutSeconds,
+                            requiresAcknowledgment = wsMessage.requiresAcknowledgment ?: true
+                        )
+                    }
                     println("=== 🔔 ALARM: ${reminder.title} at ${reminder.scheduledTime} ===")
                     _reminderAlarms.emit(reminder)
                 }
@@ -130,6 +148,9 @@ class ReminderWebSocketService(
                             type = "reminder_repeat",
                             reminderId = reminderId,
                             repeatCount = repeatCount,
+                            totalAttempts = wsMessage.totalAttempts,
+                            timeoutSeconds = wsMessage.timeoutSeconds,
+                            escalationEnabled = wsMessage.escalationEnabled,
                             message = wsMessage.message
                         )
                     )
@@ -152,6 +173,8 @@ class ReminderWebSocketService(
                         AlarmEvent(
                             type = "alarm_missed",
                             reminderId = reminderId,
+                            totalAttempts = wsMessage.totalAttempts,
+                            caregiverNotified = wsMessage.caregiverNotified,
                             message = wsMessage.message
                         )
                     )

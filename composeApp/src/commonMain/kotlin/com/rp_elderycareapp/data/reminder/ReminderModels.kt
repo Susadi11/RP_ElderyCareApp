@@ -56,6 +56,10 @@ data class Reminder(
     val adaptiveSchedulingEnabled: Boolean = true,
     @SerialName("escalation_enabled")
     val escalationEnabled: Boolean = true,
+    @SerialName("timeout_seconds")
+    val timeoutSeconds: Int? = null,
+    @SerialName("requires_acknowledgment")
+    val requiresAcknowledgment: Boolean = true,
     @SerialName("created_at")
     val createdAt: String? = null,
     @SerialName("updated_at")
@@ -83,7 +87,11 @@ data class CreateReminderRequest(
     @SerialName("notify_caregiver_on_miss")
     val notifyCaregiverOnMiss: Boolean = true,
     @SerialName("escalation_threshold_minutes")
-    val escalationThresholdMinutes: Int = 30
+    val escalationThresholdMinutes: Int = 10,
+    @SerialName("escalation_enabled")
+    val escalationEnabled: Boolean = true,
+    @SerialName("adaptive_scheduling_enabled")
+    val adaptiveSchedulingEnabled: Boolean = true
 )
 
 // Natural language reminder creation
@@ -242,6 +250,7 @@ data class ApiResponse<T>(
     val status: String,
     val message: String? = null,
     val data: T? = null,
+    val reminder: T? = null,
     val reminders: T? = null,  // Backend uses "reminders" instead of "data" for lists!
     val error: String? = null
 )
@@ -251,10 +260,20 @@ data class ApiResponse<T>(
 data class WebSocketMessage(
     val type: String,  // "reminder", "reminder_repeat", "alarm_acknowledged", "alarm_missed", "alert", "update"
     val data: String? = null,              // JSON string of reminder or alert (used by "reminder" type)
+    @SerialName("user_id") val userId: String? = null,
     @SerialName("reminder_id") val reminderId: String? = null,
     val title: String? = null,
+    val description: String? = null,
+    val priority: String? = null,
+    val category: String? = null,
+    @SerialName("scheduled_time") val scheduledTime: String? = null,
     val message: String? = null,
     @SerialName("repeat_count") val repeatCount: Int? = null,
+    @SerialName("total_attempts") val totalAttempts: Int? = null,
+    @SerialName("timeout_seconds") val timeoutSeconds: Int? = null,
+    @SerialName("requires_acknowledgment") val requiresAcknowledgment: Boolean? = null,
+    @SerialName("escalation_enabled") val escalationEnabled: Boolean? = null,
+    @SerialName("caregiver_notified") val caregiverNotified: Boolean? = null,
     val urgency: String? = null,
     val timestamp: String? = null
 )
@@ -272,6 +291,10 @@ data class AlarmEvent(
     val type: String,          // "reminder_repeat", "alarm_acknowledged", "alarm_missed"
     val reminderId: String,
     val repeatCount: Int = 0,
+    val totalAttempts: Int? = null,
+    val timeoutSeconds: Int? = null,
+    val escalationEnabled: Boolean? = null,
+    val caregiverNotified: Boolean? = null,
     val message: String? = null
 )
 
