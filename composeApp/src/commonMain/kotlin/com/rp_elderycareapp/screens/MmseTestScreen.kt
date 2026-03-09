@@ -121,6 +121,13 @@ fun MmseTestScreen(
     }
 }
 
+private const val RAW_MAX_SCORE = 20f
+private const val DISPLAY_MAX_SCORE = 30f
+
+private fun scaleScore(rawScore: Float): Float {
+    return (rawScore / RAW_MAX_SCORE) * DISPLAY_MAX_SCORE
+}
+
 @Composable
 fun BentoGridInsights(viewModel: MmseViewModel) {
     val latestScore by viewModel.latestScore
@@ -147,7 +154,7 @@ fun BentoGridInsights(viewModel: MmseViewModel) {
                         InsightCard(
                             modifier = Modifier.weight(1f).fillMaxHeight(),
                             title = "Latest Score",
-                            value = latestScore?.toString() ?: "--",
+                            value = latestScore?.let { scaleScore(it.toFloat()).toInt().toString() } ?: "--",
                             subtitle = "Total: 30 pts",
                             icon = Icons.Default.Assessment,
                             containerColor = Color(0xFF4A9FFF),
@@ -328,11 +335,13 @@ private fun MmseTestCard(alpha: Float, onStartAssessmentClick: () -> Unit) {
 
 @Composable
 private fun AssessmentHistoryItem(assessment: MmseAssessment) {
-    val scorePercentage = assessment.total_score / 30f
+    val scaledScore = scaleScore(assessment.total_score)
+    val scorePercentage = scaledScore / DISPLAY_MAX_SCORE
     val scoreColor = when {
-        scorePercentage >= 0.8f -> Color(0xFF10B981)
-        scorePercentage >= 0.6f -> Color(0xFFF59E0B)
-        else -> Color(0xFFEF4444)
+        scaledScore >= 26 -> Color(0xFF10B981) // Normal
+        scaledScore >= 20 -> Color(0xFFF59E0B) // Mild
+        scaledScore >= 10 -> Color(0xFFFF8C00) // Moderate
+        else -> Color(0xFFEF4444)              // Severe
     }
 
     Card(
@@ -342,7 +351,7 @@ private fun AssessmentHistoryItem(assessment: MmseAssessment) {
     ) {
         Row(modifier = Modifier.fillMaxWidth().padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(modifier = Modifier.size(56.dp).background(scoreColor.copy(alpha = 0.1f), CircleShape), contentAlignment = Alignment.Center) {
-                Text(text = assessment.total_score.toInt().toString(), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = scoreColor)
+                Text(text = scaledScore.toInt().toString(), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = scoreColor)
             }
             Spacer(modifier = Modifier.width(20.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -380,7 +389,7 @@ private fun formatDate(dateStr: String): String {
 @Composable
 fun MmseScoreGraph(scores: List<MmseAssessment>) {
     val chronologicalScores = scores.sortedBy { it.assessment_date }
-    val maxScore = 30
+    val maxScore = DISPLAY_MAX_SCORE
     val animationProgress = remember { Animatable(0f) }
 
     LaunchedEffect(chronologicalScores) {
@@ -415,7 +424,8 @@ fun MmseScoreGraph(scores: List<MmseAssessment>) {
                         val spacing = width / (chronologicalScores.size - 1)
                         val points = chronologicalScores.mapIndexed { index, assessment ->
                             val x = index * spacing
-                            val targetY = height - (assessment.total_score / maxScore) * height
+                            val scaled = scaleScore(assessment.total_score)
+                            val targetY = height - (scaled / maxScore) * height
                             Offset(x, height - (height - targetY) * animationProgress.value)
                         }
 

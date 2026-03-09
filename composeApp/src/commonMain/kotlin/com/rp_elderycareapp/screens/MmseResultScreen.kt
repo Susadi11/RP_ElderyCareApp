@@ -500,56 +500,56 @@ fun MmseResultScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     // View Detailed Report Button
-                    Button(
-                        onClick = onViewDetails,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(60.dp)
-                            .shadow(
-                                elevation = 10.dp,
-                                shape = RoundedCornerShape(30.dp),
-                                ambientColor = Color(0xFF4A9FFF).copy(alpha = 0.5f)
-                            ),
-                        shape = RoundedCornerShape(30.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.Transparent
-                        ),
-                        contentPadding = PaddingValues(0.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    brush = Brush.horizontalGradient(
-                                        colors = listOf(
-                                            Color(0xFF4A9FFF),
-                                            Color(0xFF3B82F6)
-                                        )
-                                    ),
-                                    shape = RoundedCornerShape(30.dp)
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Assessment,
-                                    contentDescription = "Details",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = "View Detailed Report",
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
-                            }
-                        }
-                    }
+//                    Button(
+//                        onClick = onViewDetails,
+//                        modifier = Modifier
+//                            .fillMaxWidth()
+//                            .height(60.dp)
+//                            .shadow(
+//                                elevation = 10.dp,
+//                                shape = RoundedCornerShape(30.dp),
+//                                ambientColor = Color(0xFF4A9FFF).copy(alpha = 0.5f)
+//                            ),
+//                        shape = RoundedCornerShape(30.dp),
+//                        colors = ButtonDefaults.buttonColors(
+//                            containerColor = Color.Transparent
+//                        ),
+//                        contentPadding = PaddingValues(0.dp)
+//                    ) {
+//                        Box(
+//                            modifier = Modifier
+//                                .fillMaxSize()
+//                                .background(
+//                                    brush = Brush.horizontalGradient(
+//                                        colors = listOf(
+//                                            Color(0xFF4A9FFF),
+//                                            Color(0xFF3B82F6)
+//                                        )
+//                                    ),
+//                                    shape = RoundedCornerShape(30.dp)
+//                                ),
+//                            contentAlignment = Alignment.Center
+//                        ) {
+//                            Row(
+//                                horizontalArrangement = Arrangement.Center,
+//                                verticalAlignment = Alignment.CenterVertically
+//                            ) {
+//                                Icon(
+//                                    imageVector = Icons.Default.Assessment,
+//                                    contentDescription = "Details",
+//                                    tint = Color.White,
+//                                    modifier = Modifier.size(24.dp)
+//                                )
+//                                Spacer(modifier = Modifier.width(12.dp))
+//                                Text(
+//                                    text = "View Detailed Report",
+//                                    fontSize = 18.sp,
+//                                    fontWeight = FontWeight.Bold,
+//                                    color = Color.White
+//                                )
+//                            }
+//                        }
+//                    }
 
                     // Back to Home Button
                     OutlinedButton(
