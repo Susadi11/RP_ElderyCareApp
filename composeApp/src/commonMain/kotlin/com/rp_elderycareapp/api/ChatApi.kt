@@ -85,8 +85,8 @@ class ChatApi {
 
                     // Append audio file bytes
                     append("file", audioBytes, Headers.build {
-                        append(HttpHeaders.ContentType, "audio/wav")
-                        append(HttpHeaders.ContentDisposition, "filename=\"audio.wav\"")
+                        append(HttpHeaders.ContentType, "audio/mp4")
+                        append(HttpHeaders.ContentDisposition, "filename=\"audio.m4a\"")
                     })
                 }
             ).body()

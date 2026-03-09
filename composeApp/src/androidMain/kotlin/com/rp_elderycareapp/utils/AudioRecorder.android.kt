@@ -10,8 +10,8 @@ class AudioRecorder(private val context: Context) {
     private var outputFile: File? = null
 
     fun startRecording(): String {
-        // Create output file
-        outputFile = File(context.cacheDir, "audio_${System.currentTimeMillis()}.wav")
+        // Use .m4a — MPEG_4 container with AAC is what MediaRecorder actually produces
+        outputFile = File(context.cacheDir, "audio_${System.currentTimeMillis()}.m4a")
 
         mediaRecorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             MediaRecorder(context)
@@ -20,8 +20,10 @@ class AudioRecorder(private val context: Context) {
             MediaRecorder()
         }.apply {
             setAudioSource(MediaRecorder.AudioSource.MIC)
-            setOutputFormat(MediaRecorder.OutputFormat.DEFAULT)
+            setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
             setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+            setAudioEncodingBitRate(128000)
+            setAudioSamplingRate(44100)
             setOutputFile(outputFile?.absolutePath)
 
             try {
