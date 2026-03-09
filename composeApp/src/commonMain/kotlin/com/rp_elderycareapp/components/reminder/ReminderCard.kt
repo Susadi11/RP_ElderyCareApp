@@ -51,8 +51,8 @@ fun ReminderCard(
         // Remove milliseconds and normalize timezone
         var timeStr = reminder.scheduledTime.trim()
         
-        // Remove milliseconds if present (.000, .123, etc)
-        timeStr = timeStr.replace(Regex("\\.\\d{3}"), "")
+        // Remove fractional seconds if present (.000, .123, .123456, etc)
+        timeStr = timeStr.replace(Regex("\\.\\d+"), "")
         
         // Handle timezone offset formats
         timeStr = when {
@@ -75,8 +75,15 @@ fun ReminderCard(
     }
     
     val now = Clock.System.now()
-    val diffMillis = (scheduledTime - now).inWholeMinutes
-    
+    // The backend stores naive local datetimes treated as UTC.
+    // Adjust diffMillis by the device timezone offset so that comparisons
+    // (overdue, snooze badge) work on the same local-as-UTC scale.
+    val localNow = now.toLocalDateTime(TimeZone.currentSystemDefault())
+    val utcNow   = now.toLocalDateTime(TimeZone.UTC)
+    val tzOffsetMinutes = (localNow.date.toEpochDays() * 1440L + localNow.hour * 60 + localNow.minute) -
+                          (utcNow.date.toEpochDays() * 1440L + utcNow.hour * 60 + utcNow.minute)
+    val diffMillis = (scheduledTime - now).inWholeMinutes + tzOffsetMinutes
+
     println("⏰ Reminder: ${reminder.title}")
     println("   Scheduled instant: $scheduledTime")
     println("   Current time: $now")
@@ -85,7 +92,7 @@ fun ReminderCard(
     // Format the scheduled date/time for display
     // Parse as UTC since backend stores in UTC, but we want to display the entered time
     val localDateTime = scheduledTime.toLocalDateTime(TimeZone.UTC)
-    val nowDateTime = now.toLocalDateTime(TimeZone.currentSystemDefault())
+    val nowDateTime = localNow
     
     println("🔍 Scheduled instant: $scheduledTime")
     println("🔍 Local date time: $localDateTime") 
