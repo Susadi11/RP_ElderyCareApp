@@ -15,7 +15,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.resume
 import java.io.File
 import java.io.IOException
 import java.text.SimpleDateFormat
@@ -147,51 +149,55 @@ class AndroidAudioRecorder(private val context: Context) : AudioRecorder {
         }
     }
     
-    override suspend fun playRecording(): Result<Unit> = withContext(Dispatchers.IO) {
-        try {
-            val filePath = _audioFilePath.value
-            println("🔊 Attempting to play recording: $filePath")
-            
-            if (filePath == null) {
-                println("❌ File path is null")
-                return@withContext Result.failure(Exception("No recording to play - file path is null"))
+    override suspend fun playRecording(): Result<Unit> {
+        val filePath = _audioFilePath.value
+        println("🔊 Attempting to play recording: $filePath")
+
+        if (filePath == null) {
+            return Result.failure(Exception("No recording found. Please record again."))
+        }
+
+        val file = File(filePath)
+        if (!file.exists() || file.length() == 0L) {
+            return Result.failure(Exception("Recording file is missing or empty. Please record again."))
+        }
+
+        // Stop any existing playback safely
+        try { stopPlayback() } catch (_: Exception) {}
+
+        return suspendCancellableCoroutine { continuation ->
+            val player = MediaPlayer()
+            try {
+                player.setDataSource(filePath)
+                player.setOnPreparedListener { mp ->
+                    mp.start()
+                    mediaPlayer = mp
+                    println("✅ Playback started successfully")
+                    continuation.resume(Result.success(Unit))
+                }
+                player.setOnErrorListener { _, what, extra ->
+                    player.release()
+                    mediaPlayer = null
+                    continuation.resume(Result.failure(Exception("Playback failed (error $what/$extra). Try recording again.")))
+                    true
+                }
+                player.prepareAsync()
+            } catch (e: Exception) {
+                player.release()
+                mediaPlayer = null
+                continuation.resume(Result.failure(Exception("Failed to play recording: ${e.message ?: "unknown error"}")))
             }
-            
-            val file = File(filePath)
-            if (!file.exists()) {
-                println("❌ File does not exist: $filePath")
-                return@withContext Result.failure(Exception("Recording file not found: $filePath"))
-            }
-            
-            val fileSize = file.length()
-            println("✅ Playing file: $filePath (${fileSize} bytes)")
-            
-            // Stop any existing playback
-            stopPlayback()
-            
-            mediaPlayer = MediaPlayer().apply {
-                setDataSource(filePath)
-                prepare()
-                start()
-            }
-            
-            println("✅ Playback started successfully")
-            Result.success(Unit)
-        } catch (e: Exception) {
-            println("❌ Failed to play recording: ${e.message}")
-            e.printStackTrace()
-            Result.failure(Exception("Failed to play recording: ${e.message}"))
         }
     }
     
     override suspend fun stopPlayback() {
         withContext(Dispatchers.IO) {
-            mediaPlayer?.apply {
-                if (isPlaying) {
-                    stop()
+            try {
+                mediaPlayer?.apply {
+                    if (isPlaying) stop()
+                    release()
                 }
-                release()
-            }
+            } catch (_: Exception) {}
             mediaPlayer = null
         }
     }
