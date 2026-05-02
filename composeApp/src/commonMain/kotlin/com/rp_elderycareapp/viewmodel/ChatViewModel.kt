@@ -13,7 +13,7 @@ import kotlinx.datetime.Clock
 
 class ChatViewModel {
     private val chatApi = ChatApi()
-    // Scoped to the ViewModel (not the screen) so coroutines survive navigation
+    // Own scope so coroutines survive navigation (not tied to composable lifecycle)
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     val messages = mutableStateOf(getInitialMessages())
@@ -22,13 +22,12 @@ class ChatViewModel {
     val errorMessage = mutableStateOf<String?>(null)
 
     fun sendTextMessage(userId: String, messageText: String) {
-        val userMessage = ChatMessage(
+        messages.value = messages.value + ChatMessage(
             id = "msg_${Clock.System.now().toEpochMilliseconds()}",
             content = messageText,
             sender = MessageSender.USER,
             type = MessageType.TEXT
         )
-        messages.value = messages.value + userMessage
         errorMessage.value = null
 
         scope.launch {
@@ -65,7 +64,6 @@ class ChatViewModel {
     }
 
     fun sendVoiceMessage(userId: String, audioFilePath: String) {
-        // Show voice bubble immediately so the user sees it was sent
         val voiceMsgId = "voice_${Clock.System.now().toEpochMilliseconds()}"
         messages.value = messages.value + ChatMessage(
             id = voiceMsgId,
@@ -85,7 +83,6 @@ class ChatViewModel {
                 )
                 result.onSuccess { voiceResponse ->
                     sessionId.value = voiceResponse.session_id
-                    // Update the placeholder with the actual transcription
                     messages.value = messages.value.map { msg ->
                         if (msg.id == voiceMsgId) msg.copy(content = voiceResponse.transcription) else msg
                     }
