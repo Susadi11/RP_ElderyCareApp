@@ -32,7 +32,9 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -701,9 +703,11 @@ private fun CreateReminderDialog(onDismiss: () -> Unit, onCreate: (CreateReminde
                         Button(
                             onClick = {
                                 val validTime = normalizeTime(selectedTime)
+                                val utcScheduledTime = LocalDateTime.parse("${selectedDate}T${validTime}:00")
+                                    .toInstant(TimeZone.currentSystemDefault()).toString()
                                 onCreate(CreateReminderRequest(
                                     userId = userId, title = title, description = description.ifBlank { null },
-                                    scheduledTime = "${selectedDate}T${validTime}:00", category = category, priority = priority,
+                                    scheduledTime = utcScheduledTime, category = category, priority = priority,
                                     repeat_pattern = repeatPattern,
                                     repeatIntervalMinutes = if (repeatPattern == "custom" && repeatIntervalMinutes.isNotBlank()) repeatIntervalMinutes.toIntOrNull() else null,
                                     notifyCaregiverOnMiss = notifyCaregiverOnMiss,
@@ -847,9 +851,11 @@ private fun EditReminderDialog(reminder: Reminder, onDismiss: () -> Unit, onUpda
                         Button(
                             onClick = {
                                 val validTime = normalizeTime(selectedTime)
+                                val utcScheduledTime = LocalDateTime.parse("${selectedDate}T${validTime}:00")
+                                    .toInstant(TimeZone.currentSystemDefault()).toString()
                                 onUpdate(CreateReminderRequest(
                                     userId = userId, title = title, description = description.ifBlank { null },
-                                    scheduledTime = "${selectedDate}T${validTime}:00", category = category, priority = priority,
+                                    scheduledTime = utcScheduledTime, category = category, priority = priority,
                                     repeat_pattern = repeatPattern,
                                     repeatIntervalMinutes = if (repeatPattern == "custom" && repeatIntervalMinutes.isNotBlank()) repeatIntervalMinutes.toIntOrNull() else null,
                                     notifyCaregiverOnMiss = notifyCaregiverOnMiss,

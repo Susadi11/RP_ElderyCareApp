@@ -59,23 +59,11 @@ class ReminderWebSocketService(
         websocketJob = scope.launch {
             try {
                 _connectionState.value = ConnectionState.Connecting
-                
-                // Parse host and port from baseUrl (e.g., "ws://172.28.2.178:8000")
-                val url = baseUrl.removePrefix("ws://").removePrefix("wss://")
-                val (host, portStr) = if (":" in url) {
-                    url.split(":", limit = 2)
-                } else {
-                    listOf(url, "80")
-                }
-                val port = portStr.toIntOrNull() ?: 8080
-                
-                println("=== Connecting to WebSocket: $host:$port/ws/user/$userId ===")
-                
-                client.webSocket(
-                    host = host,
-                    port = port,
-                    path = "/ws/user/$userId"
-                ) {
+
+                val wsUrl = "$baseUrl/ws/user/$userId"
+                println("=== Connecting to WebSocket: $wsUrl ===")
+
+                client.webSocket(wsUrl) {
                     session = this
                     _connectionState.value = ConnectionState.Connected
                     println("=== WebSocket Connected! ===")
