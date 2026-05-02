@@ -22,7 +22,6 @@ import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 
-// Platform-specific composable for AI avatar
 @Composable
 expect fun AIAvatarIcon()
 
@@ -51,7 +50,6 @@ fun MessageBubble(
         horizontalArrangement = if (isUserMessage) Arrangement.End else Arrangement.Start
     ) {
         if (!isUserMessage) {
-            // AI Companion Avatar with robot icon
             AIAvatarIcon()
             Spacer(modifier = Modifier.width(8.dp))
         }
@@ -60,7 +58,6 @@ fun MessageBubble(
             modifier = Modifier.widthIn(max = 280.dp),
             horizontalAlignment = if (isUserMessage) Alignment.End else Alignment.Start
         ) {
-            // Message bubble
             Box(
                 modifier = Modifier
                     .clip(
@@ -114,8 +111,7 @@ fun MessageBubble(
                     }
                 }
             }
-            
-            // Timestamp
+
             val time = Instant.fromEpochMilliseconds(message.timestamp)
                 .toLocalDateTime(TimeZone.currentSystemDefault())
             val timeString = "${time.hour.toString().padStart(2, '0')}:${time.minute.toString().padStart(2, '0')}"
@@ -129,7 +125,6 @@ fun MessageBubble(
 
         if (isUserMessage) {
             Spacer(modifier = Modifier.width(8.dp))
-            // User Avatar
             Box(
                 modifier = Modifier
                     .size(40.dp)
