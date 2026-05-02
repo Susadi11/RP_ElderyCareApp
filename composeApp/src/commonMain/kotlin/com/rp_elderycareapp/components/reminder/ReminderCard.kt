@@ -67,13 +67,9 @@ fun ReminderCard(
     }
 
     val now = Clock.System.now()
-    val localNow = now.toLocalDateTime(TimeZone.currentSystemDefault())
-    val utcNow   = now.toLocalDateTime(TimeZone.UTC)
-    val tzOffsetMinutes = (localNow.date.toEpochDays() * 1440L + localNow.hour * 60 + localNow.minute) -
-                          (utcNow.date.toEpochDays()   * 1440L + utcNow.hour   * 60 + utcNow.minute)
-    val diffMillis = (scheduledTime - now).inWholeMinutes + tzOffsetMinutes
+    val diffMillis = (scheduledTime - now).inWholeMinutes
 
-    val localDateTime = scheduledTime.toLocalDateTime(TimeZone.UTC)
+    val localDateTime = scheduledTime.toLocalDateTime(TimeZone.currentSystemDefault())
 
     val hour12 = if (localDateTime.hour == 0) 12
                  else if (localDateTime.hour > 12) localDateTime.hour - 12

@@ -10,6 +10,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.datetime.TimeZone
 
 // UI States
 sealed class ReminderUiState {
@@ -296,7 +297,8 @@ class ReminderViewModel(private val alarmManager: PlatformAlarmManager? = null) 
                     audioFile = audioBytes,
                     fileName = fileName,
                     userId = userId,
-                    priority = priority
+                    priority = priority,
+                    userTimezone = TimeZone.currentSystemDefault().id
                 )
                     .onSuccess { response ->
                         println("Audio reminder created successfully!")
