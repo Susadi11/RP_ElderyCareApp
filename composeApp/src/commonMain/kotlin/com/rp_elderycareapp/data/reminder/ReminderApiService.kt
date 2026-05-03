@@ -112,12 +112,13 @@ class ReminderApiService {
         fileName: String,
         userId: String,
         priority: String? = null,
-        caregiverIds: String? = null
+        caregiverIds: String? = null,
+        userTimezone: String? = null
     ): Result<AudioReminderResponse> {
         return try {
             val boundary = "----WebKitFormBoundary${System.currentTimeMillis()}"
             val response = client.post("$baseUrl/create-from-audio") {
-                setBody(buildMultipartFormData(boundary, audioFile, fileName, userId, priority, caregiverIds))
+                setBody(buildMultipartFormData(boundary, audioFile, fileName, userId, priority, caregiverIds, userTimezone))
                 contentType(ContentType.parse("multipart/form-data; boundary=$boundary"))
             }
 
@@ -155,28 +156,36 @@ class ReminderApiService {
         fileName: String,
         userId: String,
         priority: String?,
-        caregiverIds: String?
+        caregiverIds: String?,
+        userTimezone: String?
     ): ByteArray {
         val builder = StringBuilder()
         val lineBreak = "\r\n"
-        
+
         // Add user_id field
         builder.append("--$boundary$lineBreak")
         builder.append("Content-Disposition: form-data; name=\"user_id\"$lineBreak$lineBreak")
         builder.append("$userId$lineBreak")
-        
+
         // Add priority if present
         if (priority != null) {
             builder.append("--$boundary$lineBreak")
             builder.append("Content-Disposition: form-data; name=\"priority\"$lineBreak$lineBreak")
             builder.append("$priority$lineBreak")
         }
-        
+
         // Add caregiver_ids if present
         if (caregiverIds != null) {
             builder.append("--$boundary$lineBreak")
             builder.append("Content-Disposition: form-data; name=\"caregiver_ids\"$lineBreak$lineBreak")
             builder.append("$caregiverIds$lineBreak")
+        }
+
+        // Add user timezone so backend converts extracted time to UTC correctly
+        if (userTimezone != null) {
+            builder.append("--$boundary$lineBreak")
+            builder.append("Content-Disposition: form-data; name=\"user_timezone\"$lineBreak$lineBreak")
+            builder.append("$userTimezone$lineBreak")
         }
         
         // Add file

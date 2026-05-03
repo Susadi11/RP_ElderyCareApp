@@ -17,6 +17,7 @@ import com.rp_elderycareapp.navigation.NavRoutes
 import com.rp_elderycareapp.screens.*
 import com.rp_elderycareapp.ui.theme.ElderyCareTheme
 import com.rp_elderycareapp.viewmodel.AuthViewModel
+import com.rp_elderycareapp.viewmodel.ChatViewModel
 import androidx.compose.runtime.remember
 import com.rp_elderycareapp.screens.getPreferencesManager
 import kotlinx.coroutines.launch
@@ -27,6 +28,7 @@ fun App() {
     ElderyCareTheme {
         val preferencesManager = getPreferencesManager()
         val authViewModel = remember { AuthViewModel(preferencesManager) }
+        val chatViewModel = remember { ChatViewModel() }
         val navController = rememberNavController()
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route
@@ -135,6 +137,7 @@ fun App() {
                     // Chat screen takes full height (no bottom padding)
                     ChatScreen(
                         authViewModel = authViewModel,
+                        chatViewModel = chatViewModel,
                         onNavigateBack = { navController.popBackStack() }
                     )
                 }

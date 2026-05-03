@@ -20,6 +20,7 @@ object ApiConfig {
 
     // API Endpoints
     object Endpoints {
+        
         const val CHAT_TEXT = "/chat/text"
         const val CHAT_VOICE = "/chat/voice"
         const val CHAT_SESSIONS = "/chat/sessions"

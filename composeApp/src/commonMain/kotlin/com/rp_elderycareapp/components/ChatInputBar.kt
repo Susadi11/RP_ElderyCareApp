@@ -22,7 +22,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rp_elderycareapp.ui.theme.AppColors
 
-// Expect function for platform-specific mic icon
 expect fun getMicIconPainter(): Any
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -37,13 +36,12 @@ fun ChatInputBar(
     isRecording: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    // Simple recording indicator without complex animation
     val recordingScale = if (isRecording) 1.1f else 1f
 
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .imePadding(), // Apply IME padding to the input bar
+            .imePadding(),
         color = MaterialTheme.colorScheme.surface,
         shadowElevation = 8.dp
     ) {
@@ -53,7 +51,6 @@ fun ChatInputBar(
                 .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
             if (isRecording) {
-                // Recording indicator
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -83,7 +80,6 @@ fun ChatInputBar(
                 verticalAlignment = Alignment.Bottom,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Text input field
                 OutlinedTextField(
                     value = message,
                     onValueChange = onMessageChange,
@@ -105,14 +101,11 @@ fun ChatInputBar(
                     enabled = !isRecording
                 )
 
-                // Send button (sends text OR stops recording and sends voice)
                 IconButton(
                     onClick = {
                         if (isRecording) {
-                            // Stop recording and send voice message
                             onStopVoiceRecording()
                         } else if (message.trim().isNotEmpty()) {
-                            // Send text message
                             onSendMessage()
                         }
                     },
@@ -130,14 +123,11 @@ fun ChatInputBar(
                     )
                 }
 
-                // Voice recording button (mic to start, X to cancel)
                 IconButton(
                     onClick = {
                         if (isRecording) {
-                            // Red X button - cancel recording without sending
                             onCancelVoiceRecording?.invoke()
                         } else {
-                            // Green mic - start recording
                             onStartVoiceRecording()
                         }
                     },
@@ -145,8 +135,8 @@ fun ChatInputBar(
                         .size(56.dp)
                         .clip(CircleShape)
                         .background(
-                            if (isRecording) Color(0xFFEF4444) // Red when recording (X button)
-                            else Color(0xFF10B981) // Green for mic
+                            if (isRecording) Color(0xFFEF4444)
+                            else Color(0xFF10B981)
                         )
                 ) {
                     MicIconContent(isRecording = isRecording)
