@@ -17,6 +17,5 @@ fun initializePreferencesManager(preferencesManager: PreferencesManager) {
 }
 
 actual fun getApiBaseUrl(): String {
-    val customUrl = preferencesManagerInstance?.getBaseUrl()
-    return customUrl ?: ApiConfig.BASE_URL_ANDROID_EMULATOR
+    return ApiConfig.BASE_URL_ANDROID_EMULATOR
 }
