@@ -15,8 +15,8 @@ object ApiConfig {
     const val BASE_URL_ANDROID_EMULATOR = "http://10.0.2.2:8080"
 
     // ===== HOSTED (uncomment for production) =====
-   const val BASE_URL_LOCALHOST = "https://api.hale-eldery.life"
-   const val BASE_URL_ANDROID_EMULATOR = "https://api.hale-eldery.life"
+   //const val BASE_URL_LOCALHOST = "https://api.hale-eldery.life"
+   //const val BASE_URL_ANDROID_EMULATOR = "https://api.hale-eldery.life"
 
     // API Endpoints
     object Endpoints {

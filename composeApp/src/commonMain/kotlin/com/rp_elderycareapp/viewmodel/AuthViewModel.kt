@@ -227,21 +227,24 @@ class AuthViewModel(private val preferencesManager: PreferencesManager) {
             withContext(Dispatchers.Main) {
                 result.onSuccess { response ->
                     currentUser.value = response.user
-                    
-                    // Update stored profile
                     val profileJson = json.encodeToString(response.user)
                     preferencesManager.saveUserProfile(profileJson)
-                    
                     println("AuthViewModel: Profile loaded for ${response.user.email}")
                 }.onFailure { error ->
-                    errorMessage.value = "Failed to load profile: ${parseErrorMessage(error)}"
+                    // If we already have cached user data, silently fall back to it
+                    // rather than showing a misleading "Invalid credentials" banner
+                    if (currentUser.value == null) {
+                        errorMessage.value = "Failed to load profile: ${parseErrorMessage(error)}"
+                    }
                     println("AuthViewModel: Load profile failed: ${error.message}")
                 }
                 isLoading.value = false
             }
         } catch (e: Exception) {
             withContext(Dispatchers.Main) {
-                errorMessage.value = "Failed to load profile: ${e.message}"
+                if (currentUser.value == null) {
+                    errorMessage.value = "Failed to load profile: ${e.message}"
+                }
                 isLoading.value = false
             }
         }
