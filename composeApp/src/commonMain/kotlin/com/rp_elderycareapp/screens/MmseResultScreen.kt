@@ -39,10 +39,10 @@ fun MmseResultScreen(
         .coerceIn(0, maxScore)
     // Determine risk level based on score (MMSE standard)
     val (riskLevel, riskColor, riskEmoji) = when {
-        scaledScore >= 26 -> Triple("Normal", Color(0xFF10B981), "🎉")
-        scaledScore >= 20 -> Triple("Mild", Color(0xFFFBBF24), "⚠️")
-        scaledScore >= 10 -> Triple("Moderate", Color(0xFFF97316), "⚠️")
-        else -> Triple("Severe", Color(0xFFEF4444), "🚨")
+        scaledScore >= 26 -> Triple("Normal", Color(0xFF52A48E), "🎉")
+        scaledScore >= 20 -> Triple("Mild", Color(0xFFD4B483), "⚠️")
+        scaledScore >= 10 -> Triple("Moderate", Color(0xFFE5945A), "⚠️")
+        else -> Triple("Severe", Color(0xFFCB7070), "🚨")
     }
 
     val recommendation = when {
@@ -143,7 +143,7 @@ fun MmseResultScreen(
                         text = "Test Completed!",
                         fontSize = 32.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF1A1A2E),
+                        color = Color(0xFF374151),
                         textAlign = TextAlign.Center
                     )
 
@@ -388,7 +388,7 @@ fun MmseResultScreen(
                                     text = "AI Voice Analysis",
                                     fontSize = 18.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF1E40AF)
+                                    color = Color(0xFF2563A8)
                                 )
                             }
                             
@@ -403,13 +403,13 @@ fun MmseResultScreen(
                                     Text(
                                         text = "Detection",
                                         fontSize = 14.sp,
-                                        color = Color(0xFF1E40AF).copy(alpha = 0.7f)
+                                        color = Color(0xFF2563A8).copy(alpha = 0.7f)
                                     )
                                     Text(
                                         text = mlRiskLabel,
                                         fontSize = 20.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (mlRiskLabel.contains("Dementia", ignoreCase = true)) Color(0xFFEF4444) else Color(0xFF10B981)
+                                        color = if (mlRiskLabel.contains("Dementia", ignoreCase = true)) Color(0xFFCB7070) else Color(0xFF52A48E)
                                     )
                                 }
                                 
@@ -418,13 +418,13 @@ fun MmseResultScreen(
                                         Text(
                                             text = "Confidence",
                                             fontSize = 14.sp,
-                                            color = Color(0xFF1E40AF).copy(alpha = 0.7f)
+                                            color = Color(0xFF2563A8).copy(alpha = 0.7f)
                                         )
                                         Text(
                                             text = "${(mlProbability * 100).toInt()}%",
                                             fontSize = 20.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = Color(0xFF1E40AF)
+                                            color = Color(0xFF2563A8)
                                         )
                                     }
                                 }
@@ -458,7 +458,7 @@ fun MmseResultScreen(
                         ),
                     shape = RoundedCornerShape(24.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFFFEF3C7)
+                        containerColor = Color(0xFFEBF5FB)
                     )
                 ) {
                     Row(
@@ -477,13 +477,13 @@ fun MmseResultScreen(
                                 text = "Recommendation",
                                 fontSize = 17.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF92400E)
+                                color = Color(0xFF374151)
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = recommendation,
                                 fontSize = 15.sp,
-                                color = Color(0xFF78350F),
+                                color = Color(0xFF4B5563),
                                 lineHeight = 22.sp
                             )
                         }
@@ -560,7 +560,7 @@ fun MmseResultScreen(
                         shape = RoundedCornerShape(30.dp),
                         colors = ButtonDefaults.outlinedButtonColors(
                             containerColor = Color.White,
-                            contentColor = Color(0xFF1A1A2E)
+                            contentColor = Color(0xFF374151)
                         ),
                         border = androidx.compose.foundation.BorderStroke(
                             width = 2.dp,
@@ -574,7 +574,7 @@ fun MmseResultScreen(
                             Icon(
                                 imageVector = Icons.Default.Home,
                                 contentDescription = "Home",
-                                tint = Color(0xFF1A1A2E),
+                                tint = Color(0xFF374151),
                                 modifier = Modifier.size(24.dp)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
@@ -604,10 +604,10 @@ private fun ScoreCategoryItem(
 ) {
     val backgroundColor = if (isActive) {
         when (label) {
-            "Normal" -> Color(0xFFD1FAE5)
-            "Mild" -> Color(0xFFFEF3C7)
-            "Moderate" -> Color(0xFFFED7AA)
-            "Severe" -> Color(0xFFFEE2E2)
+            "Normal" -> Color(0xFFE8F5F1)
+            "Mild" -> Color(0xFFFFF8EC)
+            "Moderate" -> Color(0xFFFEF0E7)
+            "Severe" -> Color(0xFFFEECEC)
             else -> Color(0xFFF3F4F6)
         }
     } else {
@@ -616,10 +616,10 @@ private fun ScoreCategoryItem(
 
     val textColor = if (isActive) {
         when (label) {
-            "Normal" -> Color(0xFF065F46)
-            "Mild" -> Color(0xFF78350F)
-            "Moderate" -> Color(0xFF9A3412)
-            "Severe" -> Color(0xFF991B1B)
+            "Normal" -> Color(0xFF3A7D6E)
+            "Mild" -> Color(0xFFB5813A)
+            "Moderate" -> Color(0xFFBF703D)
+            "Severe" -> Color(0xFFB05555)
             else -> Color(0xFF6B7280)
         }
     } else {

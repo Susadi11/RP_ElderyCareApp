@@ -70,7 +70,7 @@ fun MmseStartTestScreen(
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
                             contentDescription = "Back",
-                            tint = Color(0xFF1A1A2E)
+                            tint = Color(0xFF374151)
                         )
                     }
                 },
@@ -110,7 +110,7 @@ fun MmseStartTestScreen(
                     text = "Mini-Mental State\nExamination (MMSE)",
                     fontSize = 26.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1A1A2E),
+                    color = Color(0xFF374151),
                     textAlign = TextAlign.Center,
                     lineHeight = 32.sp
                 )
@@ -226,10 +226,10 @@ private fun MicrophoneIcon() {
             .shadow(
                 elevation = 12.dp,
                 shape = CircleShape,
-                ambientColor = Color(0xFF10B981).copy(alpha = 0.4f)
+                ambientColor = Color(0xFF90CAF9).copy(alpha = 0.3f)
             )
             .background(
-                color = Color(0xFFD1FAE5),
+                color = Color(0xFFDEEFFD),
                 shape = CircleShape
             ),
         contentAlignment = Alignment.Center
@@ -238,7 +238,7 @@ private fun MicrophoneIcon() {
             imageVector = Icons.Default.Mic,
             contentDescription = "Microphone",
             modifier = Modifier.size(50.dp),
-            tint = Color(0xFF10B981)
+            tint = Color(0xFF4A9FFF)
         )
     }
 }

@@ -19,5 +19,6 @@ enum class NavRoutes(val route: String) {
     CAREGIVER_ALERTS("caregiver_alerts"),
     SETTINGS("settings"),
     PATIENT_DETAILS("patient_details"),
-    PROFILE("profile")
+    PROFILE("profile"),
+    GAME_TRENDS("game_trends/{userId}")
 }

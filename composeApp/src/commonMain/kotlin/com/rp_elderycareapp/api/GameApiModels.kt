@@ -45,14 +45,14 @@ data class GameSessionRequest(
 
 @Serializable
 data class TrialData(
-    val trialNumber: Int? = null,      // Optional - backend doesn't require
-    val targetPosition: Int? = null,   // Optional - backend doesn't require
-    val rt_raw: Double,                // Backend expects rt_raw (reaction time in seconds)
-    val correct: Boolean,              // Required by backend (0 or 1, but Boolean works)
-    val timestamp: Long? = null,       // Optional - backend doesn't require
-    val hint_used: Int? = null         // Optional - backend field for hints
+    val trialNumber: Int? = null,
+    val targetPosition: Int? = null,
+    val rt_raw: Double,
+    val correct: Int,              // 1 = correct, 0 = incorrect — matches backend int schema
+    val timestamp: Long? = null,
+    val hint_used: Int? = null
 ) {
-    // Backward compatibility constructor
+    // Backward compatibility constructor (accepts Boolean, converts explicitly to Int)
     constructor(
         trialNumber: Int,
         targetPosition: Int,
@@ -62,8 +62,8 @@ data class TrialData(
     ) : this(
         trialNumber = trialNumber,
         targetPosition = targetPosition,
-        rt_raw = reactionTime,  // Map reactionTime to rt_raw
-        correct = correct,
+        rt_raw = reactionTime,
+        correct = if (correct) 1 else 0,
         timestamp = timestamp,
         hint_used = 0
     )
@@ -93,8 +93,9 @@ data class SessionFeatures(
     val sac: Double,
     val ies: Double,
     val accuracy: Double,
-    val rtAdjMedian: Double,  // Backend uses rtAdjMedian (reaction time adjusted for motor baseline)
-    val variability: Double   // Backend uses variability
+    val rtAdjMedian: Double,
+    val variability: Double,
+    val hintDependencyRate: Double = 0.0
 )
 
 @Serializable
@@ -137,6 +138,8 @@ data class SessionHistoryItem(
     val level: Int,
     val sac: Double,
     val ies: Double,
+    val accuracy: Double = 0.0,
+    val hintDependencyRate: Double = 0.0,
     val riskLevel: String,
     val riskScore: Double
 )

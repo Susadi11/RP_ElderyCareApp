@@ -66,9 +66,9 @@ fun SignupScreen(
     }
     
     // Observe ViewModel state
-    val isLoading = authViewModel.isLoading.value
-    val errorMessage = authViewModel.errorMessage.value
-    val successMessage = authViewModel.successMessage.value
+    val isLoading by authViewModel.isLoading
+    val errorMessage by authViewModel.errorMessage
+    val successMessage by authViewModel.successMessage
     
     // Navigate on successful registration (check specifically for registration message)
     LaunchedEffect(successMessage) {

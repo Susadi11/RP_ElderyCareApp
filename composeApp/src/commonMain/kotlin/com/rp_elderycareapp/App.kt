@@ -42,6 +42,17 @@ fun App() {
                            currentRoute != NavRoutes.PATIENT_DASHBOARD.route &&
                            currentRoute != NavRoutes.CAREGIVER_ALERTS.route
         
+        val isAuthenticated by authViewModel.isAuthenticated
+        androidx.compose.runtime.LaunchedEffect(isAuthenticated) {
+            if (!isAuthenticated &&
+                currentRoute != NavRoutes.LOGIN.route &&
+                currentRoute != NavRoutes.SIGNUP.route) {
+                navController.navigate(NavRoutes.LOGIN.route) {
+                    popUpTo(0) { inclusive = true }
+                }
+            }
+        }
+
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             bottomBar = {
@@ -129,12 +140,27 @@ fun App() {
                 }
                 composable(NavRoutes.GAME.route) {
                     Box(modifier = Modifier.padding(innerPadding)) {
-                        GameScreen(authViewModel = authViewModel)
+                        GameScreen(
+                            authViewModel = authViewModel,
+                            onNavigateToTrends = {
+                                val userId = authViewModel.currentUser.value?.user_id ?: ""
+                                navController.navigate("game_trends/$userId")
+                            }
+                        )
+                    }
+                }
+                composable("game_trends/{userId}") { backStackEntry ->
+                    val userId = backStackEntry.arguments?.getString("userId") ?: ""
+                    Box(modifier = Modifier.padding(innerPadding)) {
+                        GameTrendScreen(
+                            userId = userId,
+                            onNavigateBack = { navController.popBackStack() }
+                        )
                     }
                 }
                 composable(NavRoutes.HOME.route) {
                     Box(modifier = Modifier.padding(innerPadding)) {
-                        val currentUser = authViewModel.currentUser.value
+                        val currentUser by authViewModel.currentUser
                         HomeScreen(
                             userName = currentUser?.full_name ?: "User",
                             authViewModel = authViewModel,

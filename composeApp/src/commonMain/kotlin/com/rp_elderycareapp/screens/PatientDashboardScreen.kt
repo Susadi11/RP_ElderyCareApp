@@ -28,7 +28,7 @@ fun PatientDashboardScreen(
     val viewModel = remember { DashboardViewModel() }
     var selectedDays by remember { mutableStateOf(7) }
     
-    LaunchedEffect(selectedDays) {
+    LaunchedEffect(userId, selectedDays) {
         viewModel.loadDashboard(userId, selectedDays)
         viewModel.loadBehaviorPattern(userId, 30)
         viewModel.loadWeeklyReport(userId)

@@ -105,7 +105,7 @@ fun MmseTestScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = "Detailed History", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1A2E))
+                    Text(text = "Detailed History", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF374151))
                     Text(text = "${assessments.size} tests", fontSize = 14.sp, color = Color(0xFF6B7280))
                 }
 
@@ -139,7 +139,7 @@ fun BentoGridInsights(viewModel: MmseViewModel) {
             text = "Cognitive Insights",
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF1A1A2E),
+            color = Color(0xFF374151),
             modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
         )
         
@@ -172,8 +172,8 @@ fun BentoGridInsights(viewModel: MmseViewModel) {
                             },
                             containerColor = Color.White,
                             iconColor = when(trendStatus) {
-                                "Improving" -> Color(0xFF10B981)
-                                "Declining" -> Color(0xFFEF4444)
+                                "Improving" -> Color(0xFF52A48E)
+                                "Declining" -> Color(0xFFCB7070)
                                 else -> Color(0xFF4A9FFF)
                             }
                         )
@@ -217,8 +217,8 @@ fun BentoGridInsights(viewModel: MmseViewModel) {
                             },
                             containerColor = Color.White,
                             iconColor = when(trendStatus) {
-                                "Improving" -> Color(0xFF10B981)
-                                "Declining" -> Color(0xFFEF4444)
+                                "Improving" -> Color(0xFF52A48E)
+                                "Declining" -> Color(0xFFCB7070)
                                 else -> Color(0xFF4A9FFF)
                             }
                         )
@@ -249,7 +249,7 @@ fun InsightCard(
     subtitle: String? = null,
     icon: ImageVector,
     containerColor: Color = Color.White,
-    contentColor: Color = Color(0xFF1A1A2E),
+    contentColor: Color = Color(0xFF374151),
     iconColor: Color? = null
 ) {
     Card(
@@ -317,7 +317,7 @@ private fun MmseTestCard(alpha: Float, onStartAssessmentClick: () -> Unit) {
                 Icon(imageVector = Icons.Default.Psychology, contentDescription = "Brain Icon", modifier = Modifier.size(40.dp), tint = Color(0xFF4A9FFF))
             }
             Spacer(modifier = Modifier.height(24.dp))
-            Text(text = "MMSE Cognitive Test", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1A2E), textAlign = TextAlign.Center)
+            Text(text = "MMSE Cognitive Test", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFF374151), textAlign = TextAlign.Center)
             Spacer(modifier = Modifier.height(12.dp))
             Text(text = "Voice-based cognitive screening", fontSize = 16.sp, color = Color(0xFF6B7280), textAlign = TextAlign.Center)
             Spacer(modifier = Modifier.height(32.dp))
@@ -338,10 +338,10 @@ private fun AssessmentHistoryItem(assessment: MmseAssessment) {
     val scaledScore = scaleScore(assessment.total_score)
     val scorePercentage = scaledScore / DISPLAY_MAX_SCORE
     val scoreColor = when {
-        scaledScore >= 26 -> Color(0xFF10B981) // Normal
-        scaledScore >= 20 -> Color(0xFFF59E0B) // Mild
-        scaledScore >= 10 -> Color(0xFFFF8C00) // Moderate
-        else -> Color(0xFFEF4444)              // Severe
+        scaledScore >= 26 -> Color(0xFF52A48E)  // Normal
+        scaledScore >= 20 -> Color(0xFFD4B483)  // Mild
+        scaledScore >= 10 -> Color(0xFFE5945A)  // Moderate
+        else -> Color(0xFFCB7070)               // Severe
     }
 
     Card(
@@ -355,7 +355,7 @@ private fun AssessmentHistoryItem(assessment: MmseAssessment) {
             }
             Spacer(modifier = Modifier.width(20.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = "Assessment Score", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF1A1A2E))
+                Text(text = "Assessment Score", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF374151))
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(imageVector = Icons.Default.CalendarMonth, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color(0xFF6B7280))
@@ -364,8 +364,8 @@ private fun AssessmentHistoryItem(assessment: MmseAssessment) {
                 }
             }
             assessment.ml_summary?.ml_risk_label?.let { label ->
-                Box(modifier = Modifier.background(if (label == "Control") Color(0xFFE0F2F1) else Color(0xFFFFEBEE), RoundedCornerShape(12.dp)).padding(horizontal = 10.dp, vertical = 6.dp)) {
-                    Text(text = label, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (label == "Control") Color(0xFF00796B) else Color(0xFFC62828))
+                Box(modifier = Modifier.background(if (label == "Control") Color(0xFFE8F5F2) else Color(0xFFFEECEC), RoundedCornerShape(12.dp)).padding(horizontal = 10.dp, vertical = 6.dp)) {
+                    Text(text = label, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (label == "Control") Color(0xFF3A7D6E) else Color(0xFFCB7070))
                 }
             }
             Spacer(modifier = Modifier.width(12.dp))
@@ -404,7 +404,7 @@ fun MmseScoreGraph(scores: List<MmseAssessment>) {
         Column(modifier = Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column {
-                    Text(text = "Score Trend", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1A2E))
+                    Text(text = "Score Trend", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF374151))
                     Text(text = "Progress over time", fontSize = 14.sp, color = Color(0xFF6B7280))
                 }
                 Icon(imageVector = Icons.Default.ShowChart, contentDescription = null, tint = Color(0xFF4A9FFF), modifier = Modifier.size(28.dp))

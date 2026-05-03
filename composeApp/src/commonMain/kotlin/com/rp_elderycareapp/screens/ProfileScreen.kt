@@ -62,10 +62,10 @@ fun ProfileScreen(
     val scope = rememberCoroutineScope()
 
     // Observe user data
-    val currentUser = authViewModel.currentUser.value
-    val isLoading = authViewModel.isLoading.value
-    val successMessage = authViewModel.successMessage.value
-    val errorMessage = authViewModel.errorMessage.value
+    val currentUser by authViewModel.currentUser
+    val isLoading by authViewModel.isLoading
+    val successMessage by authViewModel.successMessage
+    val errorMessage by authViewModel.errorMessage
 
     // Profile photo state - use a key to force reload after upload
     var photoRefreshKey by remember { mutableStateOf(0) }
@@ -80,9 +80,12 @@ fun ProfileScreen(
         }
     }
 
-    // Load profile on first launch
-    LaunchedEffect(Unit) {
-        authViewModel.loadUserProfile()
+    // Load profile when authenticated
+    val isAuthenticated by authViewModel.isAuthenticated
+    LaunchedEffect(isAuthenticated) {
+        if (isAuthenticated) {
+            authViewModel.loadUserProfile()
+        }
     }
 
     Column(
@@ -111,8 +114,9 @@ fun ProfileScreen(
                     ) {
                         if (currentUser?.has_profile_photo == true) {
                             // Load profile photo from server
-                            val photoUrl = remember(currentUser.user_id, photoRefreshKey) {
-                                authViewModel.getProfilePhotoUrl(currentUser.user_id) + "?t=$photoRefreshKey"
+                            val user = currentUser!!
+                            val photoUrl = remember(user.user_id, photoRefreshKey) {
+                                authViewModel.getProfilePhotoUrl(user.user_id) + "?t=$photoRefreshKey"
                             }
                             AsyncImage(
                                 model = photoUrl,

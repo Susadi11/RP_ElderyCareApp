@@ -34,13 +34,14 @@ fun ForgotPasswordScreen(
     val scope = rememberCoroutineScope()
     
     // Observe ViewModel state
-    val isLoading = authViewModel.isLoading.value
-    val errorMessage = authViewModel.errorMessage.value
-    val successMessage = authViewModel.successMessage.value
+    val isLoading by authViewModel.isLoading
+    val errorMessage by authViewModel.errorMessage
+    val successMessage by authViewModel.successMessage
     
     // Navigate to reset screen on success
     LaunchedEffect(successMessage) {
-        if (successMessage != null && successMessage.contains("Reset code sent")) {
+        val msg = successMessage
+        if (msg != null && msg.contains("Reset code sent")) {
             kotlinx.coroutines.delay(1000)
             onNavigateToReset(email)
         }
@@ -118,7 +119,7 @@ fun ForgotPasswordScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Error message
-            if (errorMessage != null) {
+            errorMessage?.let { msg ->
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -127,7 +128,7 @@ fun ForgotPasswordScreen(
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
-                        text = errorMessage,
+                        text = msg,
                         color = Color(0xFFC62828),
                         fontSize = 14.sp,
                         modifier = Modifier.padding(12.dp)
@@ -137,7 +138,7 @@ fun ForgotPasswordScreen(
             }
 
             // Success message
-            if (successMessage != null) {
+            successMessage?.let { msg ->
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -146,7 +147,7 @@ fun ForgotPasswordScreen(
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
-                        text = successMessage,
+                        text = msg,
                         color = Color(0xFF2E7D32),
                         fontSize = 14.sp,
                         modifier = Modifier.padding(12.dp)

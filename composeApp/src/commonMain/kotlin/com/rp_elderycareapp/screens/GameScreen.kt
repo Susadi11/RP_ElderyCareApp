@@ -29,15 +29,18 @@ import com.rp_elderycareapp.components.GameCalibration
 import com.rp_elderycareapp.components.GridTapGame
 import com.rp_elderycareapp.data.GameRepository
 import com.rp_elderycareapp.viewmodel.AuthViewModel
+import com.rp_elderycareapp.viewmodels.DifficultyConfig
 import com.rp_elderycareapp.viewmodels.GameState
 import com.rp_elderycareapp.viewmodels.GameViewModel
+import com.rp_elderycareapp.viewmodels.difficultyForRisk
 import kotlinx.datetime.Clock
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameScreen(
     authViewModel: AuthViewModel? = null,
-    onNavigateBack: () -> Unit = {}
+    onNavigateBack: () -> Unit = {},
+    onNavigateToTrends: () -> Unit = {}
 ) {
     val userId = authViewModel?.currentUser?.value?.user_id ?: ""
     val token = authViewModel?.getAccessToken() ?: ""
@@ -91,19 +94,26 @@ fun GameScreen(
                     GameReadyScreen(
                         stats = uiState.stats,
                         motorBaseline = uiState.motorBaseline,
+                        difficulty = uiState.difficulty,
                         onStartGame = {
                             gameStartTime = Clock.System.now().toEpochMilliseconds()
                             viewModel.startGame()
                         },
                         onRecalibrate = {
                             viewModel.forceRecalibration()
-                        }
+                        },
+                        onViewTrends = onNavigateToTrends
                     )
                 }
 
                 is GameState.Playing -> {
+                    val diff = uiState.difficulty
                     GridTapGame(
-                        totalTrials = uiState.totalTrials,
+                        totalTrials = diff.totalTrials,
+                        targetTimeoutMs = diff.targetTimeoutMs,
+                        minIsiMs = diff.minIsiMs,
+                        maxIsiMs = diff.maxIsiMs,
+                        hintThreshold = diff.hintThreshold,
                         onTrialComplete = { trial ->
                             viewModel.recordTrial(trial)
                         },
@@ -121,6 +131,7 @@ fun GameScreen(
                         score = uiState.score,
                         streak = uiState.streak,
                         onPlayAgain = { viewModel.resetToReady() },
+                        onViewTrends = onNavigateToTrends,
                         onExit = onNavigateBack
                     )
                 }
@@ -174,8 +185,10 @@ fun LoadingScreen(message: String) {
 fun GameReadyScreen(
     stats: com.rp_elderycareapp.api.UserStatsResponse?,
     motorBaseline: Double?,
+    difficulty: DifficultyConfig = difficultyForRisk(null),
     onStartGame: () -> Unit,
-    onRecalibrate: () -> Unit
+    onRecalibrate: () -> Unit,
+    onViewTrends: () -> Unit = {}
 ) {
     val infiniteTransition = rememberInfiniteTransition()
     val pulseScale by infiniteTransition.animateFloat(
@@ -268,29 +281,59 @@ fun GameReadyScreen(
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
-                        
-                        // Risk level badge
-                        Surface(
-                            shape = RoundedCornerShape(20.dp),
-                            color = when (it.currentRiskLevel) {
-                                "LOW" -> Color(0xFF10B981).copy(alpha = 0.1f)
-                                "MEDIUM" -> Color(0xFFF59E0B).copy(alpha = 0.1f)
-                                "HIGH" -> Color(0xFFEF4444).copy(alpha = 0.1f)
-                                else -> Color(0xFF94A3B8).copy(alpha = 0.1f)
-                            }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
                         ) {
-                            Text(
-                                text = "Risk Level: ${it.currentRiskLevel}",
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Bold,
+                            // Risk level badge
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
                                 color = when (it.currentRiskLevel) {
-                                    "LOW" -> Color(0xFF10B981)
-                                    "MEDIUM" -> Color(0xFFF59E0B)
-                                    "HIGH" -> Color(0xFFEF4444)
-                                    else -> Color(0xFF64748B)
-                                },
-                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
-                            )
+                                    "LOW" -> Color(0xFF10B981).copy(alpha = 0.1f)
+                                    "MEDIUM" -> Color(0xFFF59E0B).copy(alpha = 0.1f)
+                                    "HIGH" -> Color(0xFFEF4444).copy(alpha = 0.1f)
+                                    else -> Color(0xFF94A3B8).copy(alpha = 0.1f)
+                                }
+                            ) {
+                                Text(
+                                    text = "Risk: ${it.currentRiskLevel}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = when (it.currentRiskLevel) {
+                                        "LOW" -> Color(0xFF10B981)
+                                        "MEDIUM" -> Color(0xFFF59E0B)
+                                        "HIGH" -> Color(0xFFEF4444)
+                                        else -> Color(0xFF64748B)
+                                    },
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                )
+                            }
+                            // Difficulty badge
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
+                                color = when (difficulty.level) {
+                                    1 -> Color(0xFF10B981).copy(alpha = 0.1f)
+                                    3 -> Color(0xFFEF4444).copy(alpha = 0.1f)
+                                    else -> Color(0xFF0EA5E9).copy(alpha = 0.1f)
+                                }
+                            ) {
+                                Text(
+                                    text = when (difficulty.level) {
+                                        1 -> "🟢 Easy"
+                                        3 -> "🔴 Challenge"
+                                        else -> "🔵 Standard"
+                                    },
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = when (difficulty.level) {
+                                        1 -> Color(0xFF10B981)
+                                        3 -> Color(0xFFEF4444)
+                                        else -> Color(0xFF0EA5E9)
+                                    },
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                )
+                            }
                         }
                 }
             }
@@ -334,7 +377,8 @@ fun GameReadyScreen(
                     text = "• Watch the 3×3 grid carefully\n" +
                             "• A box will light up randomly\n" +
                             "• Tap it as quickly as you can\n" +
-                            "• Complete 50 trials\n" +
+                            "• Complete ${difficulty.totalTrials} trials " +
+                            "(${difficulty.targetTimeoutMs / 1000.0}s per target)\n" +
                             "• Try to build a streak!",
                     style = MaterialTheme.typography.bodyLarge,
                     color = Color(0xFF475569),
@@ -399,6 +443,26 @@ fun GameReadyScreen(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+
+        // View Trends button
+        OutlinedButton(
+            onClick = onViewTrends,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(36.dp),
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = Color(0xFF0EA5E9)
+            ),
+            border = BorderStroke(1.5.dp, Color(0xFF0EA5E9).copy(alpha = 0.5f))
+        ) {
+            Text(
+                "📈 View Cognitive Trends",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         // Recalibration button (subtle)
         motorBaseline?.let {
@@ -478,6 +542,7 @@ fun ResultsScreen(
     score: Int,
     streak: Int,
     onPlayAgain: () -> Unit,
+    onViewTrends: () -> Unit = {},
     onExit: () -> Unit
 ) {
     // Celebration animation
@@ -725,6 +790,13 @@ fun ResultsScreen(
                 ModernMetricRow("⚙️ Efficiency (IES)", "${(response.features.ies * 1000).toInt() / 1000.0}", Color(0xFFF59E0B))
                 ModernMetricRow("📈 RT Variability", "${(response.features.variability * 1000).toInt()} ms", Color(0xFF8B5CF6))
                 ModernMetricRow("🔥 Best Streak", "$streak hits", Color(0xFFEF4444))
+                ModernMetricRow(
+                    "💡 Hint Usage",
+                    if (response.features.hintDependencyRate > 0)
+                        "${(response.features.hintDependencyRate * 100).toInt()}% of trials"
+                    else "None",
+                    Color(0xFFD97706)
+                )
             }
         }
 
@@ -746,7 +818,28 @@ fun ResultsScreen(
         }
 
         Spacer(modifier = Modifier.weight(1f))
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // View Trends button
+        OutlinedButton(
+            onClick = onViewTrends,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            shape = RoundedCornerShape(26.dp),
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = Color(0xFF0C4A6E)
+            ),
+            border = BorderStroke(1.5.dp, Color(0xFF0EA5E9).copy(alpha = 0.6f))
+        ) {
+            Text(
+                "📈 View Cognitive Trends",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
 
         // Modern gradient action button
         Button(

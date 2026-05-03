@@ -36,6 +36,10 @@ import kotlinx.datetime.Clock
 @Composable
 fun GridTapGame(
     totalTrials: Int = 50,
+    targetTimeoutMs: Long = 2500L,
+    minIsiMs: Long = 800L,
+    maxIsiMs: Long = 1500L,
+    hintThreshold: Int = 3,
     onTrialComplete: (TrialData) -> Unit,
     onGameComplete: () -> Unit,
     modifier: Modifier = Modifier
@@ -44,7 +48,6 @@ fun GridTapGame(
     var targetIndex by remember { mutableStateOf(-1) }
     var showTarget by remember { mutableStateOf(false) }
     var targetShownTime by remember { mutableStateOf(0L) }
-    var gameStartTime by remember { mutableStateOf(Clock.System.now().toEpochMilliseconds()) }
     var score by remember { mutableStateOf(0) }
     var streak by remember { mutableStateOf(0) }
     var maxStreak by remember { mutableStateOf(0) }
@@ -52,40 +55,54 @@ fun GridTapGame(
     var countdown by remember { mutableStateOf(3) }
     var gameStarted by remember { mutableStateOf(false) }
     var needsNextTrial by remember { mutableStateOf(false) }
+
+    // Hint system state
+    var consecutiveErrors by remember { mutableStateOf(0) }
+    var showHintForCurrentTrial by remember { mutableStateOf(false) }
+    var hintCount by remember { mutableStateOf(0) }
+
     val coroutineScope = rememberCoroutineScope()
 
-    // Countdown before game starts (reduced to 500ms per count for faster start)
+    // Countdown before game starts
     LaunchedEffect(Unit) {
         while (countdown > 0) {
-            delay(500) // Reduced from 1000ms to 500ms
+            delay(500)
             countdown--
         }
         gameStarted = true
     }
 
-    // Show new target
+    // Show new target for each trial
     LaunchedEffect(currentTrial, gameStarted) {
         if (gameStarted && currentTrial <= totalTrials && !isProcessing) {
-            delay((800..1500).random().toLong())
+            delay((minIsiMs..maxIsiMs).random())
             targetIndex = Random.nextInt(9)
+
+            // Determine hint: trigger after hintThreshold consecutive errors
+            showHintForCurrentTrial = consecutiveErrors >= hintThreshold
+            if (showHintForCurrentTrial) hintCount++
+
             showTarget = true
             targetShownTime = Clock.System.now().toEpochMilliseconds()
 
             // Auto-miss after timeout
-            delay(2500)
+            delay(targetTimeoutMs)
             if (showTarget) {
-                // Timeout - record miss
+                val hintUsed = if (showHintForCurrentTrial) 1 else 0
                 val trial = TrialData(
                     trialNumber = currentTrial,
                     targetPosition = targetIndex,
-                    reactionTime = 2.5,  // Max timeout in seconds
-                    correct = false,
-                    timestamp = Clock.System.now().toEpochMilliseconds()
+                    rt_raw = 2.5,
+                    correct = 0,
+                    timestamp = Clock.System.now().toEpochMilliseconds(),
+                    hint_used = hintUsed
                 )
                 onTrialComplete(trial)
                 showTarget = false
+                showHintForCurrentTrial = false
                 isProcessing = true
                 streak = 0
+                consecutiveErrors++
 
                 delay(300)
                 isProcessing = false
@@ -102,36 +119,39 @@ fun GridTapGame(
     fun handleBoxTap(tappedIndex: Int) {
         if (showTarget && !isProcessing) {
             val tapTime = Clock.System.now().toEpochMilliseconds()
-            val reactionTimeMs = (tapTime - targetShownTime)
-            val reactionTimeSec = reactionTimeMs / 1000.0  // Convert to seconds
+            val reactionTimeSec = (tapTime - targetShownTime) / 1000.0
             val isCorrect = tappedIndex == targetIndex
+            val hintUsed = if (showHintForCurrentTrial) 1 else 0
 
             val trial = TrialData(
                 trialNumber = currentTrial,
                 targetPosition = targetIndex,
-                reactionTime = reactionTimeSec,
-                correct = isCorrect,
-                timestamp = tapTime
+                rt_raw = reactionTimeSec,
+                correct = if (isCorrect) 1 else 0,
+                timestamp = tapTime,
+                hint_used = hintUsed
             )
 
             onTrialComplete(trial)
             showTarget = false
+            showHintForCurrentTrial = false
             isProcessing = true
 
             if (isCorrect) {
                 score++
                 streak++
                 if (streak > maxStreak) maxStreak = streak
+                consecutiveErrors = 0
             } else {
                 streak = 0
+                consecutiveErrors++
             }
 
-            // Set flag to trigger next trial
             needsNextTrial = true
         }
     }
 
-    // Handle next trial progression
+    // Progress to next trial
     LaunchedEffect(needsNextTrial) {
         if (needsNextTrial) {
             delay(300)
@@ -159,7 +179,7 @@ fun GridTapGame(
             )
             .padding(16.dp)
     ) {
-        // Modern Header with stats - glassmorphism card
+        // Header card — trial, score, streak, hints
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -169,19 +189,17 @@ fun GridTapGame(
                     ambientColor = Color(0xFF0EA5E9).copy(alpha = 0.3f)
                 ),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = Color.White.copy(alpha = 0.95f)
-            ),
+            colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.95f)),
             elevation = CardDefaults.cardElevation(0.dp)
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp),
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Trial counter with gradient
+                // Trial counter
                 Column {
                     Text(
                         text = "Trial",
@@ -197,7 +215,7 @@ fun GridTapGame(
                     )
                 }
 
-                // Score with animation
+                // Score
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = "Score",
@@ -232,10 +250,8 @@ fun GridTapGame(
                         contentDescription = null,
                         tint = if (streak > 0) Color(0xFFFFD700) else Color(0xFFCBD5E1),
                         modifier = Modifier
-                            .size(28.dp)
-                            .graphicsLayer {
-                                rotationZ = if (streak > 0) starRotation else 0f
-                            }
+                            .size(24.dp)
+                            .graphicsLayer { rotationZ = if (streak > 0) starRotation else 0f }
                     )
                     Column {
                         Text(
@@ -252,12 +268,36 @@ fun GridTapGame(
                         )
                     }
                 }
+
+                // Hint counter badge — only shown once hints have been used
+                if (hintCount > 0) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "Hints",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFF64748B),
+                            fontWeight = FontWeight.Medium
+                        )
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0xFFF59E0B).copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                text = "$hintCount",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color(0xFFD97706),
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // Countdown overlay with modern animation
+        // Countdown overlay
         if (!gameStarted) {
             Box(
                 modifier = Modifier
@@ -287,7 +327,54 @@ fun GridTapGame(
                 )
             }
         } else {
-            // 3x3 Grid
+            // Hint banner — visible when hint is active and target is on screen
+            AnimatedVisibility(
+                visible = showHintForCurrentTrial && showTarget,
+                enter = fadeIn(animationSpec = tween(200)) + scaleIn(initialScale = 0.9f),
+                exit = fadeOut(animationSpec = tween(150))
+            ) {
+                val pulseAlpha by rememberInfiniteTransition().animateFloat(
+                    initialValue = 0.85f,
+                    targetValue = 1f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(500),
+                        repeatMode = RepeatMode.Reverse
+                    )
+                )
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)
+                        .graphicsLayer { alpha = pulseAlpha },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFFEF3C7)
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(
+                        2.dp,
+                        Color(0xFFF59E0B).copy(alpha = 0.7f)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(text = "💡", fontSize = 20.sp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Hint — tap the golden box!",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF92400E)
+                        )
+                    }
+                }
+            }
+
+            // 3×3 Grid
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -305,6 +392,34 @@ fun GridTapGame(
                         repeat(3) { col ->
                             val boxIndex = row * 3 + col
                             val isTarget = boxIndex == targetIndex && showTarget
+                            val isHint = isTarget && showHintForCurrentTrial
+
+                            // Animate the hint cell with an extra pulsing border
+                            val infiniteTransition = rememberInfiniteTransition()
+                            val hintBorderWidth by infiniteTransition.animateFloat(
+                                initialValue = 4f,
+                                targetValue = 8f,
+                                animationSpec = infiniteRepeatable(
+                                    animation = tween(400),
+                                    repeatMode = RepeatMode.Reverse
+                                )
+                            )
+                            val hintGlowAlpha by infiniteTransition.animateFloat(
+                                initialValue = 0.4f,
+                                targetValue = 0.9f,
+                                animationSpec = infiniteRepeatable(
+                                    animation = tween(400),
+                                    repeatMode = RepeatMode.Reverse
+                                )
+                            )
+                            val normalGlowAlpha by infiniteTransition.animateFloat(
+                                initialValue = 0.3f,
+                                targetValue = 0.7f,
+                                animationSpec = infiniteRepeatable(
+                                    animation = tween(600),
+                                    repeatMode = RepeatMode.Reverse
+                                )
+                            )
 
                             Box(
                                 modifier = Modifier
@@ -313,34 +428,42 @@ fun GridTapGame(
                                     .shadow(
                                         elevation = if (isTarget) 20.dp else 8.dp,
                                         shape = RoundedCornerShape(20.dp),
-                                        ambientColor = if (isTarget) 
-                                            Color(0xFF0EA5E9).copy(alpha = 0.6f) 
-                                        else 
-                                            Color.Black.copy(alpha = 0.1f)
+                                        ambientColor = when {
+                                            isHint -> Color(0xFFF59E0B).copy(alpha = 0.7f)
+                                            isTarget -> Color(0xFF0EA5E9).copy(alpha = 0.6f)
+                                            else -> Color.Black.copy(alpha = 0.1f)
+                                        }
                                     )
                                     .clip(RoundedCornerShape(20.dp))
                                     .background(
-                                        if (isTarget)
-                                            Brush.radialGradient(
+                                        when {
+                                            isHint -> Brush.radialGradient(
+                                                colors = listOf(
+                                                    Color(0xFFFBBF24),
+                                                    Color(0xFFF59E0B)
+                                                )
+                                            )
+                                            isTarget -> Brush.radialGradient(
                                                 colors = listOf(
                                                     Color(0xFF0EA5E9),
                                                     Color(0xFF0284C7)
                                                 )
                                             )
-                                        else
-                                            Brush.linearGradient(
+                                            else -> Brush.linearGradient(
                                                 colors = listOf(
                                                     Color.White,
                                                     Color(0xFFF8FAFC)
                                                 )
                                             )
+                                        }
                                     )
                                     .border(
-                                        width = if (isTarget) 4.dp else 3.dp,
-                                        color = if (isTarget)
-                                            Color.White
-                                        else
-                                            Color(0xFFE2E8F0),
+                                        width = if (isHint) hintBorderWidth.dp else if (isTarget) 4.dp else 3.dp,
+                                        color = when {
+                                            isHint -> Color(0xFFD97706).copy(alpha = hintGlowAlpha)
+                                            isTarget -> Color.White
+                                            else -> Color(0xFFE2E8F0)
+                                        },
                                         shape = RoundedCornerShape(20.dp)
                                     )
                                     .clickable(
@@ -351,37 +474,39 @@ fun GridTapGame(
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
-                                // Pulsing glow for target
+                                // Inner glow overlay
                                 if (isTarget) {
-                                    val infiniteTransition = rememberInfiniteTransition()
-                                    val glowAlpha by infiniteTransition.animateFloat(
-                                        initialValue = 0.3f,
-                                        targetValue = 0.7f,
-                                        animationSpec = infiniteRepeatable(
-                                            animation = tween(600),
-                                            repeatMode = RepeatMode.Reverse
-                                        )
-                                    )
                                     Box(
                                         modifier = Modifier
                                             .fillMaxSize()
                                             .background(
-                                                Color.White.copy(alpha = glowAlpha)
+                                                Color.White.copy(
+                                                    alpha = if (isHint) hintGlowAlpha * 0.3f
+                                                    else normalGlowAlpha
+                                                )
                                             )
                                     )
                                 }
-                                
+
+                                // Icon — lamp for hint, star for normal target
                                 androidx.compose.animation.AnimatedVisibility(
                                     visible = isTarget,
                                     enter = fadeIn(animationSpec = tween(100)) + scaleIn(initialScale = 0.3f),
                                     exit = fadeOut(animationSpec = tween(100)) + scaleOut(targetScale = 0.3f)
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Star,
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(56.dp)
-                                    )
+                                    if (isHint) {
+                                        Text(
+                                            text = "💡",
+                                            fontSize = 48.sp
+                                        )
+                                    } else {
+                                        Icon(
+                                            imageVector = Icons.Default.Star,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(56.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -389,9 +514,9 @@ fun GridTapGame(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Modern Instructions with gradient text effect
+            // Bottom instruction card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -400,10 +525,16 @@ fun GridTapGame(
                 )
             ) {
                 Text(
-                    text = "Tap the highlighted box as quickly as you can!",
+                    text = if (consecutiveErrors >= hintThreshold)
+                        "Tap the golden 💡 box as quickly as you can!"
+                    else
+                        "Tap the highlighted box as quickly as you can!",
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF475569),
+                    color = if (consecutiveErrors >= hintThreshold)
+                        Color(0xFF92400E)
+                    else
+                        Color(0xFF475569),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp),

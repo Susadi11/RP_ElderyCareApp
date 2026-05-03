@@ -13,6 +13,37 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 
+// ============================================================================
+// Difficulty configuration — driven by user's current risk level
+// ============================================================================
+data class DifficultyConfig(
+    val level: Int,               // 1=Easy, 2=Standard, 3=Challenge
+    val label: String,
+    val targetTimeoutMs: Long,    // How long the lit box stays before auto-miss
+    val minIsiMs: Long,           // Min inter-stimulus interval (gap between trials)
+    val maxIsiMs: Long,           // Max inter-stimulus interval
+    val totalTrials: Int,
+    val hintThreshold: Int        // Consecutive errors before hint appears
+)
+
+fun difficultyForRisk(riskLevel: String?): DifficultyConfig = when (riskLevel) {
+    "LOW" -> DifficultyConfig(
+        level = 3, label = "Challenge",
+        targetTimeoutMs = 1800L, minIsiMs = 500L, maxIsiMs = 1000L,
+        totalTrials = 50, hintThreshold = 4
+    )
+    "HIGH" -> DifficultyConfig(
+        level = 1, label = "Easy",
+        targetTimeoutMs = 3500L, minIsiMs = 1200L, maxIsiMs = 2000L,
+        totalTrials = 40, hintThreshold = 2
+    )
+    else -> DifficultyConfig( // MEDIUM or no history
+        level = 2, label = "Standard",
+        targetTimeoutMs = 2500L, minIsiMs = 800L, maxIsiMs = 1500L,
+        totalTrials = 50, hintThreshold = 3
+    )
+}
+
 sealed class GameState {
     object Idle : GameState()
     object NeedCalibration : GameState()
@@ -32,7 +63,8 @@ data class GameUiState(
     val streak: Int = 0,
     val trials: List<TrialData> = emptyList(),
     val stats: UserStatsResponse? = null,
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val difficulty: DifficultyConfig = difficultyForRisk(null)
 )
 
 class GameViewModel(
@@ -123,19 +155,22 @@ class GameViewModel(
     }
 
     fun startGame() {
+        val difficulty = difficultyForRisk(_uiState.value.stats?.currentRiskLevel)
         _uiState.value = _uiState.value.copy(
             gameState = GameState.Playing,
             currentTrial = 0,
             score = 0,
             streak = 0,
-            trials = emptyList()
+            trials = emptyList(),
+            totalTrials = difficulty.totalTrials,
+            difficulty = difficulty
         )
     }
 
     fun recordTrial(trial: TrialData) {
         val currentTrials = _uiState.value.trials + trial
-        val newScore = if (trial.correct) _uiState.value.score + 1 else _uiState.value.score
-        val newStreak = if (trial.correct) _uiState.value.streak + 1 else 0
+        val newScore = if (trial.correct == 1) _uiState.value.score + 1 else _uiState.value.score
+        val newStreak = if (trial.correct == 1) _uiState.value.streak + 1 else 0
 
         _uiState.value = _uiState.value.copy(
             currentTrial = trial.trialNumber ?: (_uiState.value.currentTrial + 1),
@@ -156,7 +191,7 @@ class GameViewModel(
                 userId = userId,
                 sessionId = sessionId,
                 gameType = "grid_tap_3x3",
-                level = 1,
+                level = _uiState.value.difficulty.level,
                 trials = _uiState.value.trials,
                 token = token
             ).fold(
@@ -181,7 +216,10 @@ class GameViewModel(
         viewModelScope.launch {
             repository.getUserStats(userId).fold(
                 onSuccess = { stats ->
-                    _uiState.value = _uiState.value.copy(stats = stats)
+                    _uiState.value = _uiState.value.copy(
+                        stats = stats,
+                        difficulty = difficultyForRisk(stats.currentRiskLevel)
+                    )
                 },
                 onFailure = { /* Ignore stats loading errors */ }
             )
