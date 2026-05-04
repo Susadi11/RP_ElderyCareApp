@@ -13,6 +13,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -362,7 +363,12 @@ fun GridTapGame(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        Text(text = "💡", fontSize = 20.sp)
+                        Icon(
+                            imageVector = Icons.Default.Lightbulb,
+                            contentDescription = null,
+                            tint     = Color(0xFFD97706),
+                            modifier = Modifier.size(22.dp)
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "Hint — tap the golden box!",
@@ -495,9 +501,11 @@ fun GridTapGame(
                                     exit = fadeOut(animationSpec = tween(100)) + scaleOut(targetScale = 0.3f)
                                 ) {
                                     if (isHint) {
-                                        Text(
-                                            text = "💡",
-                                            fontSize = 48.sp
+                                        Icon(
+                                            imageVector = Icons.Default.Lightbulb,
+                                            contentDescription = null,
+                                            tint     = Color.White,
+                                            modifier = Modifier.size(52.dp)
                                         )
                                     } else {
                                         Icon(
@@ -526,7 +534,7 @@ fun GridTapGame(
             ) {
                 Text(
                     text = if (consecutiveErrors >= hintThreshold)
-                        "Tap the golden 💡 box as quickly as you can!"
+                        "Tap the highlighted golden box as quickly as you can!"
                     else
                         "Tap the highlighted box as quickly as you can!",
                     style = MaterialTheme.typography.bodyLarge,

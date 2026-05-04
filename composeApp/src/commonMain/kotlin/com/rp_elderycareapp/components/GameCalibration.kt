@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -127,7 +128,7 @@ fun GameCalibration(
                     modifier = Modifier.padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Animated icon
+                    // Animated icon — replaces 📍 emoji
                     val scale by infiniteTransition.animateFloat(
                         initialValue = 1f,
                         targetValue = 1.1f,
@@ -136,14 +137,25 @@ fun GameCalibration(
                             repeatMode = RepeatMode.Reverse
                         )
                     )
-                    Text(
-                        text = "📍",
-                        fontSize = 48.sp,
-                        modifier = Modifier.graphicsLayer {
-                            scaleX = scale
-                            scaleY = scale
-                        }
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .graphicsLayer { scaleX = scale; scaleY = scale }
+                            .background(
+                                androidx.compose.ui.graphics.Brush.radialGradient(
+                                    listOf(Color(0xFF38BDF8), Color(0xFF0284C7))
+                                ),
+                                CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.TouchApp,
+                            contentDescription = null,
+                            tint     = Color.White,
+                            modifier = Modifier.size(40.dp)
+                        )
+                    }
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = "Instructions",
@@ -396,7 +408,7 @@ fun GameCalibration(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                // Success animation
+                // Success animation — replaces ✓ text with CheckCircle icon
                 val scale by infiniteTransition.animateFloat(
                     initialValue = 0.9f,
                     targetValue = 1.1f,
@@ -405,15 +417,20 @@ fun GameCalibration(
                         repeatMode = RepeatMode.Reverse
                     )
                 )
-                Text(
-                    text = "✓",
-                    fontSize = 80.sp,
-                    color = Color(0xFF10B981),
-                    modifier = Modifier.graphicsLayer {
-                        scaleX = scale
-                        scaleY = scale
-                    }
-                )
+                Box(
+                    modifier = Modifier
+                        .size(96.dp)
+                        .graphicsLayer { scaleX = scale; scaleY = scale }
+                        .background(Color(0xFF10B981).copy(alpha = 0.12f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint     = Color(0xFF10B981),
+                        modifier = Modifier.size(64.dp)
+                    )
+                }
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
                     text = "Calibration Complete!",
