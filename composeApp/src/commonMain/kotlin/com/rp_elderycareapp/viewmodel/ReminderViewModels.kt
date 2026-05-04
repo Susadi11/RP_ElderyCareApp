@@ -47,6 +47,8 @@ class ReminderViewModel(private val alarmManager: PlatformAlarmManager? = null) 
 
     /** Job that runs the frontend visibility timeout cycle for the active alarm. */
     private var alarmTimeoutJob: Job? = null
+    /** Job that re-raises an alarm after a snooze delay. */
+    private var snoozeJob: Job? = null
     /** Keeps a reference to the currently ringing reminder so repeats can re-use it. */
     private var lastAlarmReminder: Reminder? = null
     /** Track locally-missed alarms to prevent re-triggering */
@@ -373,6 +375,8 @@ class ReminderViewModel(private val alarmManager: PlatformAlarmManager? = null) 
     // Dismiss alarm without completing
     fun dismissAlarm() {
         cancelAlarmTimeout()
+        snoozeJob?.cancel()
+        snoozeJob = null
         alarmManager?.dismissAlarm()
         _activeAlarm.value = null
         _alarmRepeatCount.value = 0
@@ -481,6 +485,8 @@ class ReminderViewModel(private val alarmManager: PlatformAlarmManager? = null) 
         onError: (String) -> Unit = {}
     ) {
         cancelAlarmTimeout()
+        snoozeJob?.cancel()
+        snoozeJob = null
         scope.launch {
             apiService.acknowledgeReminder(reminderId, userId, acknowledgmentMethod)
                 .onSuccess { response ->
@@ -631,6 +637,8 @@ class ReminderViewModel(private val alarmManager: PlatformAlarmManager? = null) 
     // NEW: Stop alarm with response tracking (replaces completeReminder)
     fun stopAlarmWithResponse(reminderId: String, userId: String, userResponse: String, onComplete: (StopAlarmResponse) -> Unit = {}) {
         cancelAlarmTimeout()
+        snoozeJob?.cancel()
+        snoozeJob = null
         scope.launch {
             println("=== Stopping alarm with response: $reminderId ===")
             // Always clear the alarm UI immediately so the user is never stuck
@@ -655,7 +663,13 @@ class ReminderViewModel(private val alarmManager: PlatformAlarmManager? = null) 
     
     // NEW: Snooze with behavior tracking (replaces snoozeReminder - uses 3 min default)
     fun snoozeReminderTracked(reminderId: String, userId: String, delayMinutes: Int = 3, onComplete: (SnoozeTrackedResponse) -> Unit = {}) {
+        // Capture the reminder BEFORE cancelAlarmTimeout() clears lastAlarmReminder
+        val reminderToReRaise = lastAlarmReminder
+            ?: (reminderState as? ReminderUiState.Success)?.reminders?.firstOrNull { it.id == reminderId }
+
         cancelAlarmTimeout()
+        snoozeJob?.cancel()
+
         scope.launch {
             println("=== Snoozing reminder (tracked): $reminderId for $delayMinutes min ===")
             // Always clear the alarm UI immediately so the screen is never stuck
@@ -669,15 +683,25 @@ class ReminderViewModel(private val alarmManager: PlatformAlarmManager? = null) 
                     println("=== New scheduled time from API: '${response.newScheduledTime}' ===")
                     println("=== Count this week: ${response.snoozeCountWeek}, rate: ${response.snoozeRate} ===")
                     println("=== Caregiver alert: ${response.caregiverAlert} ===")
-                    
+
                     snoozeTrackedResult = response
-                    
-                    // Update the reminder locally with new scheduled time
                     updateReminderScheduledTime(reminderId, response.newScheduledTime)
-                    
-                    // Don't call loadReminders immediately - let the local update take effect
-                    // loadReminders(userId, "active")
                     onComplete(response)
+
+                    // Re-raise alarm locally after snooze delay
+                    if (reminderToReRaise != null) {
+                        snoozeJob = scope.launch {
+                            delay(delayMinutes * 60 * 1000L)
+                            if (!locallyMissedAlarms.contains(reminderId) && _activeAlarm.value == null) {
+                                println("=== ⏰ Re-raising snoozed alarm: ${reminderToReRaise.title} ===")
+                                lastAlarmReminder = reminderToReRaise
+                                _alarmRepeatCount.value = 0
+                                _activeAlarm.value = reminderToReRaise
+                                alarmManager?.triggerAlarm(reminderToReRaise)
+                                startAlarmTimeoutCycle(reminderToReRaise)
+                            }
+                        }
+                    }
                 }
                 .onFailure { error ->
                     println("=== Failed to snooze (alarm already dismissed): ${error.message} ===")
@@ -744,6 +768,7 @@ class ReminderViewModel(private val alarmManager: PlatformAlarmManager? = null) 
     
     fun cleanup() {
         pollingJob?.cancel()
+        snoozeJob?.cancel()
         alarmManager?.cleanup()
         scope.cancel()
         apiService.close()
