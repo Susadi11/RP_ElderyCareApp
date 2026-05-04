@@ -86,14 +86,26 @@ class GameViewModel(
 
             repository.getMotorBaseline(userId).fold(
                 onSuccess = { response ->
-                    _uiState.value = _uiState.value.copy(
-                        motorBaseline = response.motor_baseline,
-                        gameState = GameState.Ready,
-                        isLoading = false
-                    )
-                    loadUserStats()
+                    // Check if motor_baseline is null (new user, no calibration yet)
+                    if (response.motor_baseline == null) {
+                        // New user - need calibration
+                        _uiState.value = _uiState.value.copy(
+                            motorBaseline = null,
+                            gameState = GameState.NeedCalibration,
+                            isLoading = false
+                        )
+                    } else {
+                        // Existing user with calibration - ready to play
+                        _uiState.value = _uiState.value.copy(
+                            motorBaseline = response.motor_baseline,
+                            gameState = GameState.Ready,
+                            isLoading = false
+                        )
+                        loadUserStats()
+                    }
                 },
                 onFailure = {
+                    // API error or no response - need calibration
                     _uiState.value = _uiState.value.copy(
                         gameState = GameState.NeedCalibration,
                         isLoading = false
@@ -152,6 +164,7 @@ class GameViewModel(
             gameState = GameState.Ready,
             isLoading = false
         )
+        loadUserStats()
     }
 
     fun startGame() {
