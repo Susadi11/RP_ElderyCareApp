@@ -948,45 +948,56 @@ private fun CategorySelector(selected: String, onSelect: (String) -> Unit) {
         Triple("others", Icons.Default.MoreHoriz, Color(0xFF8B5CF6)),
     )
 
-    fun labelFor(cat: String) = when (cat) {
-        "medication"  -> "Meds"
-        "appointment" -> "Appt"
-        "others"      -> "Others"
-        else          -> cat.replaceFirstChar { it.uppercase() }
-    }
-
-    @Composable
-    fun CategoryChip(cat: String, icon: androidx.compose.ui.graphics.vector.ImageVector, color: Color, fillRow: Boolean) {
-        val isSel = selected == cat
-        Surface(
-            onClick = { onSelect(cat) },
-            shape = RoundedCornerShape(12.dp),
-            color = if (isSel) color.copy(alpha = 0.12f) else Color(0xFFF1F5F9),
-            border = if (isSel) BorderStroke(1.5.dp, color) else BorderStroke(1.dp, Color.Transparent),
-            modifier = if (fillRow) Modifier.fillMaxWidth() else Modifier.weight(1f)
-        ) {
-            Column(
-                modifier = Modifier.padding(vertical = 10.dp, horizontal = 2.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Icon(icon, null, tint = if (isSel) color else Color(0xFFAFC8D6), modifier = Modifier.size(20.dp))
-                Text(
-                    labelFor(cat),
-                    fontSize = 10.sp, fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isSel) color else Color(0xFF94A3B8), textAlign = TextAlign.Center
-                )
-            }
-        }
-    }
-
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            row1.forEach { (cat, icon, color) -> CategoryChip(cat, icon, color, fillRow = false) }
+            for ((cat, icon, color) in row1) {
+                CategoryChip(cat = cat, icon = icon, color = color, fillRow = false, selected = selected, onSelect = onSelect)
+            }
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            row2.forEach { (cat, icon, color) -> CategoryChip(cat, icon, color, fillRow = false) }
+            for ((cat, icon, color) in row2) {
+                CategoryChip(cat = cat, icon = icon, color = color, fillRow = false, selected = selected, onSelect = onSelect)
+            }
             Spacer(modifier = Modifier.weight(3f))
+        }
+    }
+}
+
+private fun categoryLabel(cat: String) = when (cat) {
+    "medication"  -> "Meds"
+    "appointment" -> "Appt"
+    "others"      -> "Others"
+    else          -> cat.replaceFirstChar { it.uppercase() }
+}
+
+@Composable
+private fun CategoryChip(
+    cat: String,
+    icon: ImageVector,
+    color: Color,
+    fillRow: Boolean,
+    selected: String,
+    onSelect: (String) -> Unit
+) {
+    val isSel = selected == cat
+    Surface(
+        onClick = { onSelect(cat) },
+        shape = RoundedCornerShape(12.dp),
+        color = if (isSel) color.copy(alpha = 0.12f) else Color(0xFFF1F5F9),
+        border = if (isSel) BorderStroke(1.5.dp, color) else BorderStroke(1.dp, Color.Transparent),
+        modifier = if (fillRow) Modifier.fillMaxWidth() else Modifier.weight(1f)
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 10.dp, horizontal = 2.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(icon, null, tint = if (isSel) color else Color(0xFFAFC8D6), modifier = Modifier.size(20.dp))
+            Text(
+                categoryLabel(cat),
+                fontSize = 10.sp, fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
+                color = if (isSel) color else Color(0xFF94A3B8), textAlign = TextAlign.Center
+            )
         }
     }
 }
