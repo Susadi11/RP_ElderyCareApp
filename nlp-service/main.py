@@ -3,6 +3,8 @@ NLP Service for Reminder Text Processing using BERT
 Handles natural language understanding for reminder creation
 """
 
+import shared.transport
+import shared.session
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List, Dict
