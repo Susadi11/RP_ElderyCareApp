@@ -951,12 +951,12 @@ private fun CategorySelector(selected: String, onSelect: (String) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for ((cat, icon, color) in row1) {
-                CategoryChip(cat = cat, icon = icon, color = color, fillRow = false, selected = selected, onSelect = onSelect)
+                CategoryChip(cat = cat, icon = icon, color = color, modifier = Modifier.weight(1f), selected = selected, onSelect = onSelect)
             }
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for ((cat, icon, color) in row2) {
-                CategoryChip(cat = cat, icon = icon, color = color, fillRow = false, selected = selected, onSelect = onSelect)
+                CategoryChip(cat = cat, icon = icon, color = color, modifier = Modifier.weight(1f), selected = selected, onSelect = onSelect)
             }
             Spacer(modifier = Modifier.weight(3f))
         }
@@ -975,7 +975,7 @@ private fun CategoryChip(
     cat: String,
     icon: ImageVector,
     color: Color,
-    fillRow: Boolean,
+    modifier: Modifier = Modifier,
     selected: String,
     onSelect: (String) -> Unit
 ) {
@@ -985,7 +985,7 @@ private fun CategoryChip(
         shape = RoundedCornerShape(12.dp),
         color = if (isSel) color.copy(alpha = 0.12f) else Color(0xFFF1F5F9),
         border = if (isSel) BorderStroke(1.5.dp, color) else BorderStroke(1.dp, Color.Transparent),
-        modifier = if (fillRow) Modifier.fillMaxWidth() else Modifier.weight(1f)
+        modifier = modifier
     ) {
         Column(
             modifier = Modifier.padding(vertical = 10.dp, horizontal = 2.dp),
