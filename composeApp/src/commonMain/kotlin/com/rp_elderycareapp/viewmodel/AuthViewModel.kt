@@ -141,6 +141,9 @@ class AuthViewModel(private val preferencesManager: PreferencesManager) {
                     
                     println("AuthViewModel: Login successful for ${response.user.email}")
                 }.onFailure { error ->
+                    preferencesManager.clearAuthData()
+                    isAuthenticated.value = false
+                    currentUser.value = null
                     errorMessage.value = parseErrorMessage(error)
                     println("AuthViewModel: Login failed: ${error.message}")
                 }
@@ -148,6 +151,9 @@ class AuthViewModel(private val preferencesManager: PreferencesManager) {
             }
         } catch (e: Exception) {
             withContext(Dispatchers.Main) {
+                preferencesManager.clearAuthData()
+                isAuthenticated.value = false
+                currentUser.value = null
                 errorMessage.value = "Login failed: ${e.message}"
                 isLoading.value = false
             }
@@ -231,9 +237,12 @@ class AuthViewModel(private val preferencesManager: PreferencesManager) {
                     preferencesManager.saveUserProfile(profileJson)
                     println("AuthViewModel: Profile loaded for ${response.user.email}")
                 }.onFailure { error ->
-                    // If we already have cached user data, silently fall back to it
-                    // rather than showing a misleading "Invalid credentials" banner
-                    if (currentUser.value == null) {
+                    val msg = error.message ?: ""
+                    if (msg.contains("401") || msg.contains("unauthorized", ignoreCase = true)) {
+                        preferencesManager.clearAuthData()
+                        isAuthenticated.value = false
+                        currentUser.value = null
+                    } else if (currentUser.value == null) {
                         errorMessage.value = "Failed to load profile: ${parseErrorMessage(error)}"
                     }
                     println("AuthViewModel: Load profile failed: ${error.message}")
